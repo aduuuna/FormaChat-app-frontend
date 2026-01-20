@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /analytics
+Disallow: /businesses
+Disallow: /channels
+
+Sitemap: https://www.formachat.com/sitemap.xml
