@@ -123,7 +123,7 @@ function injectRegisterStyles() {
         .error-message {
             color: var(--error-red);
             margin-bottom: 15px;
-            padding: 10px;
+            padding: 8px;
             border-left: 3px solid var(--error-red);
             background: rgba(220, 53, 69, 0.05);
             border-radius: 4px;
@@ -132,7 +132,7 @@ function injectRegisterStyles() {
         .success-message {
             color: var(--success-green);
             margin-bottom: 15px;
-            padding: 10px;
+            padding: 5px;
             border-left: 3px solid var(--success-green);
             background: rgba(40, 167, 69, 0.05);
             border-radius: 4px;
@@ -238,7 +238,7 @@ function createRegisterForm(container: HTMLElement): HTMLElement {
     passwordInput.minLength = 8;
     
     const passwordHint = document.createElement('small');
-    passwordHint.innerHTML = '&nbsp;•&nbsp; 8+ characters &nbsp;•&nbsp; Uppercase & Lowercase&nbsp;•&nbsp; 1 Number';
+    passwordHint.innerHTML = 'Use at least one uppercase, lowercase, number, and special character';
     passwordHint.style.cssText = 'color: var(--text-muted); display: block; margin-top: 5px;';
     passwordDiv.appendChild(passwordHint);
     
@@ -310,7 +310,7 @@ function createOTPSection(): HTMLElement {
 
     const successMsg = document.createElement('p');
     successMsg.className = 'success-message'; 
-    successMsg.textContent = '✓ Success! Check your email for a 6-digit verification code.';
+    successMsg.textContent = 'Success! Check your inbox or spam folder for your 6-digit verification code.';
     section.appendChild(successMsg);
 
     const form = document.createElement('form');
@@ -329,7 +329,6 @@ function createOTPSection(): HTMLElement {
     otpInput.name = 'otp';
     otpInput.required = true;
     otpInput.maxLength = 6;
-    otpInput.placeholder = '••••••';
     otpInput.className = 'form-input otp-input'; 
     otpDiv.appendChild(otpInput);
 

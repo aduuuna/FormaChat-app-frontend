@@ -230,7 +230,6 @@ export function renderVerifyEmail(): HTMLElement {
     otpInput.name = 'otp';
     otpInput.required = true;
     otpInput.maxLength = 6;
-    otpInput.placeholder = '••••••';
     otpInput.className = 'otp-input';
     otpDiv.appendChild(otpInput);
 
