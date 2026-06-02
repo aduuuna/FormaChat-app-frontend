@@ -23,11 +23,14 @@ function injectEditWizardStyles() {
       --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
     }
 
+    /* Outer wrapper — constrained and centered */
     .business-edit-wizard {
       max-width: 900px;
+      width: 100%;
       margin: 0 auto;
-      padding-bottom: 0 20px;
+      padding: 0 16px 60px;
       box-sizing: border-box;
+      overflow-x: hidden;
     }
 
     /* Glass Container */
@@ -36,156 +39,287 @@ function injectEditWizardStyles() {
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--border-glass);
-      border-radius: 24px;
+      border-radius: 20px;
       box-shadow: var(--shadow-glass);
-      padding: 50px;
-      margin-top: 30px;
+      padding: 44px 48px;
+      margin-top: 24px;
       animation: floatUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-      box-sizing: border-box; 
+      box-sizing: border-box;
       width: 100%;
     }
 
-    
-
-    @media (max-width: 768px) {
-      .wizard-container {
-        padding: 30px 20px;
-      }
-    }
-
     @keyframes floatUp {
-      from { opacity: 0; transform: translateY(30px); }
+      from { opacity: 0; transform: translateY(24px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Header & Progress */
-    .page-header { text-align: center; margin-bottom: 40px; }
-    
+    /* Progress */
     .wizard-progress-bar {
       display: flex;
       justify-content: center;
-      gap: 15px;
-      margin: 30px 0;
+      gap: 14px;
+      margin: 24px 0;
     }
-    
+
     .progress-dot {
-      width: 12px;
-      height: 12px;
+      width: 11px;
+      height: 11px;
       border-radius: 50%;
       background: #e5e7eb;
       transition: all 0.3s ease;
-      position: relative;
     }
-    .progress-dot.active { background: var(--primary); transform: scale(1.4); }
+    .progress-dot.active    { background: var(--primary); transform: scale(1.4); }
     .progress-dot.completed { background: var(--success-green); }
 
     .step-counter {
       text-align: center;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 700;
       color: var(--primary);
       text-transform: uppercase;
       letter-spacing: 1px;
-      margin-bottom: 30px;
+      margin-bottom: 28px;
     }
 
     /* Form Sections */
     .form-section { display: none; }
-    .form-section.active { 
-      display: block; 
-      animation: slideInRight 0.4s ease-out; 
+    .form-section.active {
+      display: block;
+      animation: slideIn 0.35s ease-out;
     }
 
-    @keyframes slideInRight {
-      from { opacity: 0; transform: translateX(15px); }
-      to { opacity: 1; transform: translateX(0); }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(12px); }
+      to   { opacity: 1; transform: translateX(0); }
     }
 
-    h2 {
-      font-size: 1.8rem;
+    /* Section headings */
+    .form-section h2 {
+      font-size: 1.5rem;
       color: var(--text-main);
-      margin-bottom: 25px;
+      margin: 0 0 22px 0;
       font-weight: 800;
       border-bottom: 2px solid var(--primary-dim);
       padding-bottom: 10px;
     }
-    
-    h3 { font-size: 1.2rem; color: var(--text-main); margin-top: 20px; }
+    .form-section h3 {
+      font-size: 1.05rem;
+      color: var(--text-main);
+      margin: 20px 0 8px;
+    }
 
     /* Inputs */
-    .form-field { margin-bottom: 24px; }
-    
-    label { display: block; margin-bottom: 8px; font-weight: 600; color: #374151; }
+    .form-field { margin-bottom: 20px; }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      font-weight: 600;
+      color: #374151;
+      font-size: 0.9rem;
+    }
 
     input, textarea, select {
       width: 100%;
-      padding: 14px 16px;
+      padding: 12px 14px;
       border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.8);
-      font-size: 1rem;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.85);
+      font-size: 0.95rem;
       font-family: inherit;
       box-sizing: border-box;
-      transition: all 0.2s ease;
-      color: black;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      color: #1a1a1a;
     }
 
     input:focus, textarea:focus, select:focus {
       outline: none;
       border-color: var(--primary);
       background: #fff;
-      box-shadow: 0 0 0 4px var(--primary-dim);
+      box-shadow: 0 0 0 3px var(--primary-dim);
     }
 
-    /* Checkbox Tiles */
+    /* Checkbox tiles — 2 columns on mobile */
     .checkbox-group {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
     }
-    .checkbox-item input { position: absolute; opacity: 0; }
+    .checkbox-item { position: relative; }
+    .checkbox-item input { position: absolute; opacity: 0; width: 0; height: 0; }
     .checkbox-item label {
-      display: flex; align-items: center; justify-content: center;
-      background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
-      padding: 15px; cursor: pointer; font-weight: 500; text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px 8px;
+      cursor: pointer;
+      font-weight: 500;
+      text-align: center;
+      font-size: 0.88rem;
       transition: all 0.2s;
+      min-height: 48px;
     }
     .checkbox-item input:checked + label {
-      background: var(--primary-dim); border-color: var(--primary); color: var(--primary); font-weight: 700;
+      background: var(--primary-dim);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 700;
     }
 
-    /* Dynamic Arrays */
+    /* Dynamic array sections */
     .dynamic-array-section {
       background: rgba(255,255,255,0.5);
       border: 1px dashed var(--secondary);
-      border-radius: 16px;
-      padding: 25px;
-      margin-bottom: 30px;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-sizing: border-box;
     }
     .dynamic-array-item {
-      background: #fff; border-radius: 12px; padding: 20px;
-      margin-bottom: 15px; border: 1px solid #f0f0f0;
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      padding-right: 52px;
+      margin-bottom: 12px;
+      border: 1px solid #f0f0f0;
       position: relative;
+      box-sizing: border-box;
     }
 
-    /* Buttons */
+    /* Navigation buttons */
     .wizard-navigation {
-      display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 36px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(0,0,0,0.05);
     }
     .btn-nav {
-      padding: 14px 35px; border-radius: 12px; font-weight: 600; font-size: 1rem; cursor: pointer; border: none;
+      padding: 13px 28px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: none;
+      flex: 1;
+      max-width: 200px;
     }
     .btn-prev { background: #fff; border: 1px solid #e5e7eb; color: var(--text-main); }
     .btn-next { background: var(--primary); color: #fff; }
-    .btn-secondary { background: #fff; color: var(--primary); border: 1px solid var(--primary); padding: 8px 16px; border-radius: 8px; cursor: pointer; }
-    .btn-remove { 
-      color: var(--error-red); background: #fff0f0; border: 1px solid #ffcccc; 
-      padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
-      position: absolute; top: 15px; right: 15px;
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
     }
+    .btn-remove {
+      color: var(--error-red);
+      background: #fff0f0;
+      border: 1px solid #ffcccc;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+    }
+
     .error-message {
-      background: #fef2f2; border: 1px solid #fee2e2; color: var(--error-red);
-      padding: 15px; border-radius: 12px; margin-bottom: 20px; display: none;
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      color: var(--error-red);
+      padding: 13px 16px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+      display: none;
+      font-size: 0.9rem;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      .business-edit-wizard {
+        padding: 0 12px 48px;
+      }
+
+      .wizard-container {
+        padding: 24px 18px;
+        border-radius: 14px;
+        margin-top: 16px;
+      }
+
+      .form-section h2 {
+        font-size: 1.2rem;
+        margin-bottom: 18px;
+      }
+
+      .form-section h3 {
+        font-size: 0.95rem;
+      }
+
+      input, textarea, select {
+        padding: 11px 12px;
+        font-size: 0.9rem;
+        border-radius: 8px;
+      }
+
+      .checkbox-group {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .checkbox-item label {
+        padding: 10px 6px;
+        font-size: 0.82rem;
+        min-height: 44px;
+      }
+
+      .dynamic-array-section {
+        padding: 14px 12px;
+        border-radius: 10px;
+      }
+
+      .dynamic-array-item {
+        padding: 12px;
+        padding-right: 46px;
+        border-radius: 8px;
+      }
+
+      .btn-remove {
+        top: 10px;
+        right: 10px;
+        padding: 4px 8px;
+        font-size: 0.75rem;
+      }
+
+      .wizard-navigation {
+        margin-top: 28px;
+        gap: 10px;
+      }
+
+      .btn-nav {
+        padding: 12px 16px;
+        font-size: 0.88rem;
+        max-width: none;
+      }
+
+      .step-counter {
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        margin-bottom: 20px;
+      }
+
+      .form-field {
+        margin-bottom: 16px;
+      }
     }
   `;
   document.head.appendChild(style);
