@@ -287,41 +287,32 @@ function initializeWizardLogic(
 
   
     prevBtn.disabled = currentStep === 0;
-    if (currentStep === sections.length - 1) {
-      nextBtn.textContent = 'Save Changes';
-      nextBtn.type = 'submit';
-    } else {
-      nextBtn.textContent = 'Next';
-      nextBtn.type = 'button';
-    }
+    nextBtn.textContent = currentStep === sections.length - 1 ? 'Save Changes' : 'Next';
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   updateUI();
 
-  prevBtn.addEventListener('click', () => {
+  prevBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     if (currentStep > 0) {
       currentStep--;
       updateUI();
     }
   });
 
-  nextBtn.addEventListener('click', (e) => {
-    if (nextBtn.type === 'submit') return;
-
+  nextBtn.addEventListener('click', async (e) => {
     e.preventDefault();
-    if (validateStep(sections[currentStep], errorContainer)) {
-        currentStep++;
-        updateUI();
-    }
-  });
 
+    if (!validateStep(sections[currentStep], errorContainer)) return;
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (validateStep(sections[currentStep], errorContainer)) {
-        await handleUpdateBusiness(businessId, form, nextBtn, errorContainer);
+    if (currentStep === sections.length - 1) {
+      // Last step — save
+      await handleUpdateBusiness(businessId, form, nextBtn, errorContainer);
+    } else {
+      currentStep++;
+      updateUI();
     }
   });
 }
