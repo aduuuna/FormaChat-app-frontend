@@ -97,10 +97,12 @@ export function renderSettingsPage(): HTMLElement {
   const page = document.createElement('div');
   page.className = 'settings-page';
 
-  page.appendChild(createBreadcrumb([
+  const breadcrumb = createBreadcrumb([
     { label: 'Home', path: '#/dashboard' },
     { label: 'Settings' },
-  ]));
+  ]);
+  breadcrumb.style.marginBottom = '28px';
+  page.appendChild(breadcrumb);
 
   const spinner = createLoadingSpinner();
   page.appendChild(spinner);
