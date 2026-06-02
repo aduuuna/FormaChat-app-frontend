@@ -1,0 +1,21 @@
+{
+  "name": "formachat",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "build:prod": "npm run build && npm run type-check",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}
