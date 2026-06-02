@@ -266,11 +266,6 @@ export function renderHome(): HTMLElement {
   const hero = document.createElement('div');
   hero.className = 'hero-section';
 
-  const betaBadge = document.createElement('div');
-  betaBadge.className = 'beta-badge animate-item delay-1';
-  betaBadge.innerHTML = '🎉 FREE for Beta Users - Limited Spots!';
-  hero.appendChild(betaBadge);
-
   const title = document.createElement('h1');
   title.className = 'hero-title animate-item delay-2';
   title.innerHTML = 'Never Miss a Customer<br/>Question Again';
@@ -286,7 +281,7 @@ export function renderHome(): HTMLElement {
 
   const registerBtn = document.createElement('a');
   registerBtn.href = '#/register';
-  registerBtn.textContent = 'Start Free Beta Access';
+  registerBtn.textContent = 'Get Started Free';
   registerBtn.className = 'btn btn-register';
   buttonSection.appendChild(registerBtn);
 

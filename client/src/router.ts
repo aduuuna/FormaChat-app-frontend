@@ -6,8 +6,10 @@ import { renderHome } from './pages/public/home';
 import { renderLogin } from './pages/public/login';
 import { renderRegister } from './pages/public/register';
 import { renderVerifyEmail } from './pages/public/verify-email';
+import { renderForgotPassword } from './pages/public/forgot-password';
 import { renderDashboardLayout } from './pages/dashboard/layout';
 import { renderDashboardHome } from './pages/dashboard/home';
+import { renderSettingsPage } from './pages/dashboard/settings';
 import { renderBusinessList } from './pages/dashboard/businesses/list';
 import { renderBusinessCreate } from './pages/dashboard/businesses/create';
 import { renderBusinessEdit } from './pages/dashboard/businesses/edit';
@@ -169,6 +171,7 @@ class Router {
     this.route('/login', () => renderTo(appRoot, renderLogin()));
     this.route('/register', () => renderTo(appRoot, renderRegister()));
     this.route('/verify-email', () => renderTo(appRoot, renderVerifyEmail()));
+    this.route('/forgot-password', () => renderTo(appRoot, renderForgotPassword()));
 
     this.route('/chat/:businessId', async () => {
       const params = this.getParams();
@@ -183,6 +186,12 @@ class Router {
         console.error('[Router] Chat load error', error);
         appRoot.innerHTML = '<div style="color:red; text-align:center; padding:20px;">Failed to load chat.</div>';
       }
+    });
+
+    this.protectedRoute('/dashboard/settings', async () => {
+      const content = renderSettingsPage();
+      const layout = await renderDashboardLayout(content);
+      renderTo(appRoot, layout);
     });
 
     this.protectedRoute('/dashboard', async () => {

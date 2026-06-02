@@ -97,3 +97,25 @@ export const resendOTP = async (email: string): Promise<ApiResponse<any>> => {
     { skipAuth: true }
   );
 };
+
+
+export const requestPasswordReset = async (email: string): Promise<ApiResponse<any>> => {
+  return await apiPost(
+    AUTH_ENDPOINTS.PASSWORD_RESET,
+    { email },
+    { skipAuth: true }
+  );
+};
+
+
+export const confirmPasswordReset = async (
+  email: string,
+  otp: string,
+  newPassword: string
+): Promise<ApiResponse<any>> => {
+  return await apiPost(
+    AUTH_ENDPOINTS.PASSWORD_RESET_CONFIRM,
+    { email, otp, newPassword },
+    { skipAuth: true }
+  );
+};

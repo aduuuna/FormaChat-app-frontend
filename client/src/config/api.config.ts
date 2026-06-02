@@ -31,6 +31,7 @@ export const BUSINESS_ENDPOINTS = {
   UPDATE: (id: string) => `${API_BASE_URLS.BUSINESS}/businesses/${id}`,
   DELETE: (id: string) => `${API_BASE_URLS.BUSINESS}/businesses/${id}`,
   PUBLIC_DETAILS: (id: string) => `${API_BASE_URLS.BUSINESS}/businesses/public/${id}`,
+  HEALTH_SCORE: (id: string) => `${API_BASE_URLS.BUSINESS}/businesses/${id}/health-score`,
 } as const;
 
 export const CHAT_ENDPOINTS = {

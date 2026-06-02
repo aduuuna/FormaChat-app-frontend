@@ -1,7 +1,6 @@
 import { createBreadcrumb } from '../../../components/breadcrumb';
 import { createBusiness } from '../../../services/business.service';
 import type { CreateBusinessRequest } from '../../../types/business.types';
-import { showModal } from '../../../components/modal';
 
 function injectWizardStyles() {
   if (document.getElementById('business-wizard-styles')) return;
@@ -758,7 +757,15 @@ function createSection3(): HTMLElement {
     placeholder: 'e.g., Do not make guarantees about delivery times...',
     helpText: 'What should the chatbot NOT do or promise?'
   }));
-  
+
+  section.appendChild(createFormField({
+    type: 'textarea',
+    name: 'chatbotCustomInstructions',
+    label: 'Additional AI Instructions (Optional)',
+    placeholder: 'e.g., Always respond in French. End every message with our tagline. Never quote prices without a consultation call.',
+    helpText: 'Free-text instructions layered on top of the tone setting. Max 1000 characters.'
+  }));
+
   return section;
 }
 
@@ -826,7 +833,15 @@ function createSection4(): HTMLElement {
     options: ['Answer FAQs', 'Generate leads', 'Handle Complaints', 'Provide product info'],
     helpText: 'What should your chatbot be able to do?'
   }));
-  
+
+  section.appendChild(createFormField({
+    type: 'url',
+    name: 'webhookUrl',
+    label: 'Webhook URL (Optional)',
+    placeholder: 'https://your-site.com/webhooks/formachat',
+    helpText: 'We will POST to this URL every time a new lead is captured. Connects FormaChat to your CRM, Zapier, or any custom system.'
+  }));
+
   return section;
 }
 
@@ -1246,8 +1261,10 @@ async function handleCreateBusiness(
         },
         chatbotTone: formData.get('chatbotTone') as any,
         chatbotGreeting: (formData.get('chatbotGreeting') as string) || undefined,
-        chatbotRestrictions: (formData.get('chatbotRestrictions') as string) || undefined
+        chatbotRestrictions: (formData.get('chatbotRestrictions') as string) || undefined,
+        chatbotCustomInstructions: (formData.get('chatbotCustomInstructions') as string) || undefined
       },
+      webhookUrl: (formData.get('webhookUrl') as string) || undefined,
       contactEscalation: {
         contactMethods: collectArrayData(form, 'contactMethods'),
         escalationContact: {
@@ -1260,13 +1277,7 @@ async function handleCreateBusiness(
     };
     
     await createBusiness(businessData);
-    
-    showModal({
-      title: 'Success',
-      content: '<p style="margin: 0;">Business created successfully!</p>',
-      showCloseButton: true
-    });
-        window.location.hash = '#/dashboard/businesses';
+    window.location.hash = '#/dashboard/businesses';
     
   } catch (error: any) {
     errorContainer.textContent = error.message || 'Failed to create business';

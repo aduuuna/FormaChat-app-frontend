@@ -2,7 +2,7 @@ import { createBreadcrumb } from '../../../components/breadcrumb';
 import { createLoadingSpinner, hideLoadingSpinner } from '../../../components/loading-spinner';
 import { getBusinessById, updateBusiness } from '../../../services/business.service';
 import type { UpdateBusinessRequest, Business } from '../../../types/business.types';
-import { showModal } from '../../../components/modal';
+import { showToast } from '../../../utils/toast';
 
 function injectEditWizardStyles() {
   if (document.getElementById('business-wizard-styles')) return;
@@ -491,6 +491,18 @@ function createEditForm(business: Business): HTMLFormElement {
     value: business.customerSupport.chatbotGreeting || ''
   }));
 
+  s3.appendChild(createFormField({
+    type: 'textarea', name: 'chatbotRestrictions', label: 'Chatbot Restrictions (Optional)',
+    value: business.customerSupport.chatbotRestrictions || '',
+    placeholder: 'e.g., Do not make guarantees about delivery times...'
+  }));
+
+  s3.appendChild(createFormField({
+    type: 'textarea', name: 'chatbotCustomInstructions', label: 'Additional AI Instructions (Optional)',
+    value: (business.customerSupport as any).chatbotCustomInstructions || '',
+    placeholder: 'e.g., Always respond in French. End every message with our tagline.'
+  }));
+
   form.appendChild(s3);
 
   const s4 = createSection('4. Contact & Escalation');
@@ -520,6 +532,12 @@ function createEditForm(business: Business): HTMLFormElement {
     name: 'chatbotCapabilities', label: 'Capabilities',
     options: ['Answer FAQs', 'Generate leads', 'Handle Complaints', 'Provide product info'],
     checkedValues: business.contactEscalation.chatbotCapabilities
+  }));
+
+  s4.appendChild(createFormField({
+    type: 'url', name: 'webhookUrl', label: 'Webhook URL (Optional)',
+    value: (business as any).webhookUrl || '',
+    placeholder: 'https://your-site.com/webhooks/formachat'
   }));
 
   form.appendChild(s4);
@@ -558,7 +576,7 @@ function createSection(title: string): HTMLElement {
   return s;
 }
 
-function createFormField(opts: { type: string, name: string, label: string, required?: boolean, value?: string }): HTMLElement {
+function createFormField(opts: { type: string, name: string, label: string, required?: boolean, value?: string, placeholder?: string }): HTMLElement {
   const div = document.createElement('div');
   div.className = 'form-field';
   
@@ -579,7 +597,8 @@ function createFormField(opts: { type: string, name: string, label: string, requ
   
   (input as any).name = opts.name;
   if (opts.required) (input as any).required = true;
-  
+  if (opts.placeholder) (input as any).placeholder = opts.placeholder;
+
   div.appendChild(input);
   return div;
 }
@@ -804,8 +823,10 @@ async function handleUpdateBusiness(
             },
             chatbotTone: formData.get('chatbotTone') as any,
             chatbotGreeting: formData.get('chatbotGreeting') as string,
-            chatbotRestrictions: formData.get('chatbotRestrictions') as string
+            chatbotRestrictions: formData.get('chatbotRestrictions') as string,
+            chatbotCustomInstructions: (formData.get('chatbotCustomInstructions') as string) || undefined
         },
+        webhookUrl: (formData.get('webhookUrl') as string) || undefined,
         contactEscalation: {
             contactMethods: collectArrayData(form, 'contactMethods'),
             escalationContact: {
@@ -818,12 +839,7 @@ async function handleUpdateBusiness(
     };
 
     await updateBusiness(businessId, updateData);
-    
-    showModal({
-      title: 'Success',
-      content: '<p style="margin: 0;">Business updated successfully!</p>',
-      showCloseButton: true
-    });
+    showToast('Business updated successfully.', 'success');
     window.location.hash = '#/dashboard/businesses';
 
   } catch (error: any) {

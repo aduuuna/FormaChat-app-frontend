@@ -87,6 +87,7 @@ export interface CustomerSupport {
   chatbotTone: ChatbotTone;
   chatbotGreeting?: string;
   chatbotRestrictions?: string;
+  chatbotCustomInstructions?: string;
 }
 
 export interface ContactMethod {
@@ -159,6 +160,7 @@ export interface Business {
   productsServices: ProductsServices;
   customerSupport: CustomerSupport;
   contactEscalation: ContactEscalation;
+  webhookUrl?: string;
   files?: Files;
   vectorInfo: VectorInfo;
   createdAt: Date;
@@ -171,6 +173,7 @@ export interface CreateBusinessRequest {
   productsServices: ProductsServices;
   customerSupport: CustomerSupport;
   contactEscalation: ContactEscalation;
+  webhookUrl?: string;
 }
 
 export interface UpdateBusinessRequest {
@@ -178,6 +181,7 @@ export interface UpdateBusinessRequest {
   productsServices?: Partial<ProductsServices>;
   customerSupport?: Partial<CustomerSupport>;
   contactEscalation?: Partial<ContactEscalation>;
+  webhookUrl?: string;
 }
 
 export interface BusinessListResponse {

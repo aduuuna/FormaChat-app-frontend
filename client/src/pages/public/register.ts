@@ -19,7 +19,6 @@ function injectRegisterStyles() {
         /* 1. Main Container (Glassmorphism Card) */
         .register-container {
             max-width: 400px;
-            max-height: 600px;
             margin: 10px auto;
             padding: 30px;
             background: rgba(255, 255, 255, 0.9);
@@ -251,7 +250,7 @@ function createRegisterForm(container: HTMLElement): HTMLElement {
 
     const submitBtn = document.createElement('button');
     submitBtn.type = 'submit';
-    submitBtn.textContent = 'Start Free Beta Access'; 
+    submitBtn.textContent = 'Create Free Account';
     submitBtn.className = 'btn btn-primary'; 
     form.appendChild(submitBtn);
 

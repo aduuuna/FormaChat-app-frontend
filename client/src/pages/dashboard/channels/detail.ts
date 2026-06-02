@@ -1,6 +1,6 @@
 import { createBreadcrumb } from '../../../components/breadcrumb';
 import { createLoadingSpinner, hideLoadingSpinner } from '../../../components/loading-spinner';
-import { getBusinessById } from '../../../services/business.service';
+import { getBusinessById, getBusinessHealthScore } from '../../../services/business.service';
 import { showModal } from '../../../components/modal';
 import QRCode from 'qrcode';
 
@@ -407,10 +407,10 @@ export async function renderChannelsDetail(businessId: string): Promise<HTMLElem
     grid.className = 'channels-grid';
 
 
-    // const currentDomain = window.location.origin;
-    const productionDomain = 'https://formachat.com'; 
-    // const localChatUrl = `${currentDomain}/#/chat/${business._id}`;
-    const prodChatUrl = `${productionDomain}/#/chat/${business._id}`;
+    const currentDomain = window.location.hostname === 'localhost'
+      ? 'https://formachat.com'
+      : window.location.origin;
+    const prodChatUrl = `${currentDomain}/#/chat/${business._id}`;
 
     const testCard = document.createElement('section');
     testCard.className = 'glass-card';
@@ -611,6 +611,88 @@ export async function renderChannelsDetail(businessId: string): Promise<HTMLElem
       </ul>
     `;
     grid.appendChild(tipsCard);
+
+    // Health score card — best-effort, don't break the page if it fails
+    try {
+      const hs = await getBusinessHealthScore(business._id);
+      const tierColors: Record<string, string> = {
+        excellent: '#16a34a',
+        good: '#636b2f',
+        fair: '#d97706',
+        incomplete: '#dc2626',
+      };
+      const color = tierColors[hs.tier] || '#636b2f';
+      const passedChecks = hs.checks.filter(c => c.achieved).length;
+      const totalChecks = hs.checks.length;
+
+      const hsCard = document.createElement('section');
+      hsCard.className = 'glass-card full-width';
+
+      const hsTitle = document.createElement('h2');
+      hsTitle.className = 'card-title';
+      hsTitle.textContent = 'Knowledge Base Health';
+      hsCard.appendChild(hsTitle);
+
+      const hsDesc = document.createElement('p');
+      hsDesc.style.cssText = 'color:#666; font-size:0.9rem; margin:0 0 16px 0;';
+      hsDesc.textContent = 'The more complete your business profile, the better your AI performs. Fill in any missing items below.';
+      hsCard.appendChild(hsDesc);
+
+      const scoreRow = document.createElement('div');
+      scoreRow.style.cssText = 'display:flex; align-items:center; gap:16px; margin-bottom:16px;';
+
+      const scoreNum = document.createElement('span');
+      scoreNum.style.cssText = `font-size:2.5rem; font-weight:900; color:${color}; line-height:1;`;
+      scoreNum.textContent = `${hs.score}%`;
+      scoreRow.appendChild(scoreNum);
+
+      const scoreInfo = document.createElement('div');
+      const tierLabel = document.createElement('div');
+      tierLabel.style.cssText = `font-size:0.9rem; font-weight:700; color:${color}; text-transform:uppercase; letter-spacing:0.5px;`;
+      tierLabel.textContent = hs.tier;
+      const checksLabel = document.createElement('div');
+      checksLabel.style.cssText = 'font-size:0.85rem; color:#666; margin-top:2px;';
+      checksLabel.textContent = `${passedChecks} of ${totalChecks} checks passed`;
+      scoreInfo.appendChild(tierLabel);
+      scoreInfo.appendChild(checksLabel);
+      scoreRow.appendChild(scoreInfo);
+      hsCard.appendChild(scoreRow);
+
+      // Progress bar
+      const barBg = document.createElement('div');
+      barBg.style.cssText = 'background:#e5e7eb; border-radius:999px; height:8px; margin-bottom:20px; overflow:hidden;';
+      const barFill = document.createElement('div');
+      barFill.style.cssText = `background:${color}; height:100%; border-radius:999px; width:${hs.score}%; transition:width 0.6s ease;`;
+      barBg.appendChild(barFill);
+      hsCard.appendChild(barBg);
+
+      // Check list — only show failing ones
+      const failing = hs.checks.filter(c => !c.achieved);
+      if (failing.length > 0) {
+        const failTitle = document.createElement('p');
+        failTitle.style.cssText = 'font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#666; margin:0 0 10px 0;';
+        failTitle.textContent = 'Still needed:';
+        hsCard.appendChild(failTitle);
+
+        const checkList = document.createElement('ul');
+        checkList.style.cssText = 'margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:8px;';
+        failing.forEach(c => {
+          const li = document.createElement('li');
+          li.style.cssText = 'background:#fff3cd; border:1px solid #ffc107; border-radius:6px; padding:4px 10px; font-size:0.82rem; color:#856404;';
+          li.textContent = c.label;
+          checkList.appendChild(li);
+        });
+        hsCard.appendChild(checkList);
+      }
+
+      const editLink = document.createElement('a');
+      editLink.href = `#/dashboard/businesses/${business._id}/edit`;
+      editLink.style.cssText = 'display:inline-block; margin-top:16px; font-size:0.85rem; color:var(--primary); font-weight:600; text-decoration:none;';
+      editLink.textContent = 'Complete your profile to improve AI performance';
+      hsCard.appendChild(editLink);
+
+      grid.appendChild(hsCard);
+    } catch { /* health score is non-critical */ }
 
     container.appendChild(grid);
 

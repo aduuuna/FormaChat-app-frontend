@@ -278,10 +278,19 @@ export function renderLogin(): HTMLElement {
     errorDiv.style.display = 'none';
     form.appendChild(errorDiv);
 
+    const forgotLink = document.createElement('div');
+    forgotLink.style.cssText = 'text-align:right; margin-bottom:4px; margin-top:-4px;';
+    const forgotAnchor = document.createElement('a');
+    forgotAnchor.href = '#/forgot-password';
+    forgotAnchor.textContent = 'Forgot password?';
+    forgotAnchor.style.cssText = 'font-size:0.85rem; color:#636b2f; font-weight:600; text-decoration:none;';
+    forgotLink.appendChild(forgotAnchor);
+    form.appendChild(forgotLink);
+
     // === SUBMIT BUTTON ===
     const submitBtn = document.createElement('button');
     submitBtn.type = 'submit';
-    submitBtn.textContent = 'Sign In'; 
+    submitBtn.textContent = 'Sign In';
     submitBtn.className = 'btn-submit';
     form.appendChild(submitBtn);
 
@@ -305,7 +314,7 @@ export function renderLogin(): HTMLElement {
                     errorDiv.innerHTML = '<strong>Account not verified.</strong><br/>Redirecting to verification...';
                     errorDiv.style.display = 'block';
 
-                    sessionStorage.setItem('pendingVerificationEmail', email);
+                    localStorage.setItem('pendingVerificationEmail', email);
 
                     setTimeout(() => {
                         window.location.hash = '#/verify-email';

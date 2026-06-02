@@ -180,7 +180,7 @@ export function renderVerifyEmail(): HTMLElement {
     const container = document.createElement('div');
     container.className = 'verify-container'; 
 
-    const email = sessionStorage.getItem('pendingVerificationEmail');
+    const email = localStorage.getItem('pendingVerificationEmail');
 
     if (!email) {
        
@@ -286,7 +286,7 @@ export function renderVerifyEmail(): HTMLElement {
                 return;
             }
 
-            sessionStorage.removeItem('pendingVerificationEmail');
+            localStorage.removeItem('pendingVerificationEmail');
 
             successDiv.textContent = 'Email verified! Redirecting to login...';
             successDiv.style.display = 'block';

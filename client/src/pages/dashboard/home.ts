@@ -159,43 +159,30 @@ export function renderDashboardHome(): HTMLElement {
   
   const features: Feature[] = [
     {
-      title: 'Beta Perks 🎁',
+      title: 'What\'s Live Now',
       description: [
-      // Use "FREE" for emphasis
-      '100% Free access during the entire beta period',
-      '40% off the subscription for the first 6 months after launch',
-      // Grouping related ideas
-      'Priority support from the core team',
-      'Direct input on future feature roadmap and design',
-      'First access to all new features before public release'
-      ],
-      status: 'available'
-    },
-    {
-      title: 'What\'s Live Now ✅',
-      description: [
-        // Emphasize the core mechanism
-        'AI agent answers questions instantly using your business info',
+        'AI agent answers questions instantly using your uploaded business data',
         'Install anywhere: website embed, direct link, or QR code',
-        'Automatic lead capture, conversation tracking, and data export',
-        'Instant business data updates with real-time AI knowledge base adaptation',
-        'Seamless conversation handoff to a human agent when needed (if applicable)' // Added useful feature
+        'Automatic lead capture with instant email notifications to you',
+        'Conversation tracking, analytics, and lead export to CSV',
+        'Custom AI tone, greeting, and additional instructions per business',
+        'Weekly performance digest delivered to your inbox every Monday'
       ],
       status: 'available'
     },
     {
-      title: 'Coming Soon 🚀',
+      title: 'Coming Soon',
       description: [
-        'Real-time lead alerts: instant notifications when prospects engage and share contact information.',
-        'Advanced Integrations: WhatsApp and Telegram',
-        'AI agents for voice conversation support',
-        'Direct sales & payment processing through the chat widget',
+        'Human handoff: join a live conversation when the AI needs backup',
+        'WhatsApp and Telegram channel integrations',
         'Developer API and API key access for custom builds',
-        'OAuth login (Google, GitHub) and enhanced team features'
+        'OAuth login (Google, GitHub)',
+        'Voice AI agents for phone support',
+        'Direct sales and payment processing through the chat widget'
       ],
       status: 'coming-soon'
     }
-];
+  ];
   
   const featuresWrapper = document.createElement('div');
   featuresWrapper.className = 'section-spacing';

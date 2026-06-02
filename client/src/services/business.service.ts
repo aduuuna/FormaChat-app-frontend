@@ -120,6 +120,23 @@ export const getBusinessName = async (businessId: string): Promise<string> => {
   return business.basicInfo.businessName;
 };
 
+export interface HealthScoreCheck { label: string; achieved: boolean; }
+export interface HealthScoreResponse {
+  score: number;
+  tier: 'excellent' | 'good' | 'fair' | 'incomplete';
+  checks: HealthScoreCheck[];
+  vectorStatus: string;
+}
+
+export const getBusinessHealthScore = async (businessId: string): Promise<HealthScoreResponse> => {
+  const response: ApiResponse<HealthScoreResponse> = await apiGet(
+    BUSINESS_ENDPOINTS.HEALTH_SCORE(businessId)
+  );
+  if (!response.success) {
+    throw new Error((response as any).error?.message || 'Failed to fetch health score');
+  }
+  return response.data;
+};
 
 export default {
   createBusiness,
@@ -128,5 +145,6 @@ export default {
   updateBusiness,
   deleteBusiness,
   businessExists,
-  getBusinessName
+  getBusinessName,
+  getBusinessHealthScore,
 };
