@@ -56,18 +56,6 @@ export function renderHome(): HTMLElement {
     .delay-4 { animation-delay: 0.4s; }
     .delay-5 { animation-delay: 0.5s; }
 
-    .beta-badge {
-      display: inline-block;
-      padding: 8px 16px;
-      background: var(--badge-bg);
-      color: var(--badge-text);
-      border-radius: 50px;
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 24px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-
     h1.hero-title {
       font-size: clamp(2.5rem, 5vw, 4rem); /* Responsive font size */
       margin: 0 0 20px 0;

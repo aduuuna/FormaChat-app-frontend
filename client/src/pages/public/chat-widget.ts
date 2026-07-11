@@ -6,6 +6,16 @@ import {
 } from '../../services/chat.service';
 import { showModal } from '../../components/modal';
 
+/** Darken (negative percent) or lighten (positive) a #rrggbb hex color, for hover-state shades. */
+function shadeColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const r = Math.max(0, Math.min(255, (num >> 16) + amt));
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00ff) + amt));
+  const b = Math.max(0, Math.min(255, (num & 0x0000ff) + amt));
+  return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
+}
+
 function injectWidgetStyles() {
   if (document.getElementById('chat-widget-styles')) return;
 
@@ -158,6 +168,15 @@ export async function renderChatWidget(businessId: string, embedMode: boolean = 
   container.appendChild(loadingDiv);
   try {
     const business = await getBusinessById(businessId, true);
+
+    // Apply owner-customized widget theme (falls back to the default olive
+    // theme set on :root in injectWidgetStyles if no widgetConfig is set)
+    const primaryColor = (business as any).widgetConfig?.primaryColor;
+    if (primaryColor) {
+      container.style.setProperty('--primary', primaryColor);
+      container.style.setProperty('--primary-dark', shadeColor(primaryColor, -15));
+    }
+
     if (!business.isActive || business.freezeInfo?.isFrozen) {
       container.removeChild(loadingDiv);
       const errorView = createErrorView(
@@ -250,6 +269,16 @@ function createChatHeader(business: any, sessionId: string): HTMLElement {
 
   const infoGroup = document.createElement('div');
   infoGroup.className = 'header-info';
+
+  const avatarUrl = business.widgetConfig?.avatarUrl;
+  if (avatarUrl) {
+    const avatar = document.createElement('img');
+    avatar.src = avatarUrl;
+    avatar.alt = business.basicInfo.businessName;
+    avatar.className = 'bot-avatar';
+    avatar.style.cssText = 'object-fit:cover;';
+    infoGroup.appendChild(avatar);
+  }
 
   const details = document.createElement('div');
   details.className = 'bot-details';

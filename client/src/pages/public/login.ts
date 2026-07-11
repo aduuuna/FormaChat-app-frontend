@@ -1,6 +1,7 @@
 import { login, verifyTwoFactorLogin, requestMagicLink } from '../../services/auth.service';
 import { saveTokens, saveUser } from '../../utils/auth.utils';
 import { isTwoFactorRequired } from '../../types/auth.types';
+import { showToast } from '../../utils/toast';
 
 function injectLoginStyles() {
    
@@ -115,17 +116,6 @@ function injectLoginStyles() {
         }
 
         /* 5. Messages & Links */
-        .error-message {
-            background: rgba(220, 53, 69, 0.1);
-            color: var(--error-red);
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-            border-left: 3px solid var(--error-red);
-            line-height: 1.4;
-        }
-
         .register-link {
             margin-top: 25px;
             text-align: center;
@@ -273,12 +263,6 @@ export function renderLogin(): HTMLElement {
 
     form.appendChild(passwordDiv);
 
-    // === ERROR MESSAGE ===
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.style.display = 'none';
-    form.appendChild(errorDiv);
-
     const forgotLink = document.createElement('div');
     forgotLink.style.cssText = 'text-align:right; margin-bottom:4px; margin-top:-4px;';
     const forgotAnchor = document.createElement('a');
@@ -328,11 +312,6 @@ export function renderLogin(): HTMLElement {
     otpDiv.appendChild(otpInput);
     otpStep.appendChild(otpDiv);
 
-    const otpErrorDiv = document.createElement('div');
-    otpErrorDiv.className = 'error-message';
-    otpErrorDiv.style.display = 'none';
-    otpStep.appendChild(otpErrorDiv);
-
     const otpSubmitBtn = document.createElement('button');
     otpSubmitBtn.type = 'button';
     otpSubmitBtn.textContent = 'Verify & Sign In';
@@ -353,20 +332,17 @@ export function renderLogin(): HTMLElement {
         const otp = otpInput.value.trim();
         if (!pendingUserId) return;
         if (!/^\d{6}$/.test(otp)) {
-            otpErrorDiv.textContent = 'Enter the 6-digit code from your email.';
-            otpErrorDiv.style.display = 'block';
+            showToast('Enter the 6-digit code from your email.', 'error');
             return;
         }
 
-        otpErrorDiv.style.display = 'none';
         otpSubmitBtn.disabled = true;
         otpSubmitBtn.textContent = 'Verifying...';
 
         try {
             const response = await verifyTwoFactorLogin(pendingUserId, otp);
             if (!response.success) {
-                otpErrorDiv.textContent = response.error.message || 'Invalid or expired code.';
-                otpErrorDiv.style.display = 'block';
+                showToast(response.error.message || 'Invalid or expired code.', 'error');
                 return;
             }
 
@@ -374,8 +350,7 @@ export function renderLogin(): HTMLElement {
             otpSubmitBtn.style.background = '#28a745';
             completeSuccessfulLogin(response.data);
         } catch {
-            otpErrorDiv.textContent = 'An unexpected error occurred. Please try again.';
-            otpErrorDiv.style.display = 'block';
+            showToast('An unexpected error occurred. Please try again.', 'error');
         } finally {
             if (otpSubmitBtn.textContent !== 'Success!') {
                 otpSubmitBtn.disabled = false;
@@ -406,14 +381,9 @@ export function renderLogin(): HTMLElement {
     magicLinkEmailDiv.appendChild(magicLinkEmailInput);
     magicLinkStep.appendChild(magicLinkEmailDiv);
 
-    const magicLinkErrorDiv = document.createElement('div');
-    magicLinkErrorDiv.className = 'error-message';
-    magicLinkErrorDiv.style.display = 'none';
-    magicLinkStep.appendChild(magicLinkErrorDiv);
-
-    const magicLinkSuccessDiv = document.createElement('div');
-    magicLinkSuccessDiv.style.cssText = 'background:rgba(40,167,69,0.1); color:#28a745; padding:12px; border-radius:6px; font-size:0.9rem; margin-bottom:20px; border-left:3px solid #28a745; display:none;';
-    magicLinkStep.appendChild(magicLinkSuccessDiv);
+    const magicLinkSuccessMessage = document.createElement('p');
+    magicLinkSuccessMessage.style.cssText = 'display:none; text-align:center; color:#3a4014; font-size:0.9rem; margin: 4px 0 20px;';
+    magicLinkStep.appendChild(magicLinkSuccessMessage);
 
     const magicLinkSendBtn = document.createElement('button');
     magicLinkSendBtn.type = 'button';
@@ -447,28 +417,25 @@ export function renderLogin(): HTMLElement {
     magicLinkSendBtn.addEventListener('click', async () => {
         const email = magicLinkEmailInput.value.trim();
         if (!email) {
-            magicLinkErrorDiv.textContent = 'Please enter your email address.';
-            magicLinkErrorDiv.style.display = 'block';
+            showToast('Please enter your email address.', 'error');
             return;
         }
-        magicLinkErrorDiv.style.display = 'none';
         magicLinkSendBtn.disabled = true;
         magicLinkSendBtn.textContent = 'Sending...';
 
         try {
             const response = await requestMagicLink(email);
             if (!response.success) {
-                magicLinkErrorDiv.textContent = response.error.message || 'Failed to send sign-in link.';
-                magicLinkErrorDiv.style.display = 'block';
+                showToast(response.error.message || 'Failed to send sign-in link.', 'error');
                 return;
             }
-            magicLinkSuccessDiv.textContent = `Check ${email} for a link to sign in. It expires in 10 minutes.`;
-            magicLinkSuccessDiv.style.display = 'block';
+            magicLinkSuccessMessage.textContent = `Check ${email} for a link to sign in. It expires in 10 minutes.`;
+            magicLinkSuccessMessage.style.display = 'block';
             magicLinkEmailDiv.style.display = 'none';
             magicLinkSendBtn.style.display = 'none';
+            showToast('Sign-in link sent!', 'success');
         } catch {
-            magicLinkErrorDiv.textContent = 'An unexpected error occurred. Please try again.';
-            magicLinkErrorDiv.style.display = 'block';
+            showToast('An unexpected error occurred. Please try again.', 'error');
         } finally {
             magicLinkSendBtn.disabled = false;
             magicLinkSendBtn.textContent = 'Send Sign-In Link';
@@ -482,7 +449,6 @@ export function renderLogin(): HTMLElement {
         const email = emailInput.value;
         const password = passwordInput.value;
 
-        errorDiv.style.display = 'none';
         submitBtn.disabled = true;
         submitBtn.textContent = 'Verifying...';
 
@@ -492,8 +458,7 @@ export function renderLogin(): HTMLElement {
             if (!response.success) {
 
                 if (response.error.code === 'EMAIL_NOT_VERIFIED') {
-                    errorDiv.innerHTML = '<strong>Account not verified.</strong><br/>Redirecting to verification...';
-                    errorDiv.style.display = 'block';
+                    showToast('Account not verified. Redirecting to verification...', 'info');
 
                     localStorage.setItem('pendingVerificationEmail', email);
 
@@ -503,8 +468,7 @@ export function renderLogin(): HTMLElement {
                     return;
                 }
 
-                errorDiv.textContent = response.error.message || 'Invalid email or password.';
-                errorDiv.style.display = 'block';
+                showToast(response.error.message || 'Invalid email or password.', 'error');
                 return;
             }
 
@@ -524,8 +488,7 @@ export function renderLogin(): HTMLElement {
             completeSuccessfulLogin(response.data);
 
         } catch (error: any) {
-            errorDiv.textContent = 'An unexpected error occurred. Please try again.';
-            errorDiv.style.display = 'block';
+            showToast('An unexpected error occurred. Please try again.', 'error');
             console.error('Login error:', error);
         } finally {
 

@@ -138,6 +138,72 @@ export const getBusinessHealthScore = async (businessId: string): Promise<Health
   return response.data;
 };
 
+export interface Webhook {
+  id: string;
+  url: string;
+  events: string[];
+  isActive: boolean;
+  secret?: string; // only present in the create response
+  createdAt: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  event: string;
+  status: 'pending' | 'success' | 'failed' | 'exhausted';
+  httpStatus?: number;
+  attempt: number;
+  maxAttempts: number;
+  nextRetryAt?: string;
+  error?: string;
+  deliveredAt?: string;
+  createdAt: string;
+}
+
+export const getWebhookEvents = async (): Promise<string[]> => {
+  const response: ApiResponse<string[]> = await apiGet(BUSINESS_ENDPOINTS.WEBHOOK_EVENTS);
+  if (!response.success) throw new Error((response as any).error?.message || 'Failed to fetch webhook events');
+  return response.data;
+};
+
+export const listWebhooks = async (businessId: string): Promise<Webhook[]> => {
+  const response: ApiResponse<Webhook[]> = await apiGet(BUSINESS_ENDPOINTS.WEBHOOKS(businessId));
+  if (!response.success) throw new Error((response as any).error?.message || 'Failed to load webhooks');
+  return response.data;
+};
+
+export const createWebhook = async (businessId: string, url: string, events: string[]): Promise<Webhook> => {
+  const response: ApiResponse<Webhook> = await apiPost(BUSINESS_ENDPOINTS.WEBHOOKS(businessId), { url, events });
+  if (!response.success) throw new Error((response as any).error?.message || 'Failed to create webhook');
+  return response.data;
+};
+
+export const updateWebhook = async (
+  businessId: string,
+  webhookId: string,
+  updates: { url?: string; events?: string[]; isActive?: boolean }
+): Promise<Webhook> => {
+  const response: ApiResponse<Webhook> = await apiPut(BUSINESS_ENDPOINTS.WEBHOOK_DETAIL(businessId, webhookId), updates);
+  if (!response.success) throw new Error((response as any).error?.message || 'Failed to update webhook');
+  return response.data;
+};
+
+export const deleteWebhook = async (businessId: string, webhookId: string): Promise<void> => {
+  const response: ApiResponse<{ message: string }> = await apiDelete(BUSINESS_ENDPOINTS.WEBHOOK_DETAIL(businessId, webhookId));
+  if (!response.success) throw new Error((response as any).error?.message || 'Failed to delete webhook');
+};
+
+export const listWebhookDeliveries = async (businessId: string, webhookId: string): Promise<WebhookDelivery[]> => {
+  const response: ApiResponse<WebhookDelivery[]> = await apiGet(BUSINESS_ENDPOINTS.WEBHOOK_DELIVERIES(businessId, webhookId));
+  if (!response.success) throw new Error((response as any).error?.message || 'Failed to load delivery history');
+  return response.data;
+};
+
+export const retryWebhookDelivery = async (businessId: string, deliveryId: string): Promise<void> => {
+  const response: ApiResponse<{ message: string }> = await apiPost(BUSINESS_ENDPOINTS.WEBHOOK_DELIVERY_RETRY(businessId, deliveryId), {});
+  if (!response.success) throw new Error((response as any).error?.message || 'Failed to retry delivery');
+};
+
 export default {
   createBusiness,
   getBusinesses,
@@ -147,4 +213,11 @@ export default {
   businessExists,
   getBusinessName,
   getBusinessHealthScore,
+  getWebhookEvents,
+  listWebhooks,
+  createWebhook,
+  updateWebhook,
+  deleteWebhook,
+  listWebhookDeliveries,
+  retryWebhookDelivery,
 };

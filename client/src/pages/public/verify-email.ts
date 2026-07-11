@@ -1,5 +1,6 @@
 import { verifyEmail, resendOTP } from '../../services/auth.service';
 import { OTPType } from '../../types/auth.types';
+import { showToast } from '../../utils/toast';
 
 function injectVerifyEmailStyles() {
 
@@ -140,24 +141,6 @@ function injectVerifyEmailStyles() {
         }
         
         /* 5. Messages and Links */
-        .error-message {
-            background: rgba(220, 53, 69, 0.1);
-            color: var(--error-red);
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            border-left: 3px solid var(--error-red);
-        }
-        
-        .success-message {
-            background: rgba(40, 167, 69, 0.1);
-            color: var(--success-green);
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            border-left: 3px solid var(--success-green);
-        }
-        
         .link-text a {
             color: var(--primary);
             text-decoration: none;
@@ -235,16 +218,6 @@ export function renderVerifyEmail(): HTMLElement {
 
     form.appendChild(otpDiv);
 
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.style.display = 'none';
-    form.appendChild(errorDiv);
-
-    const successDiv = document.createElement('div');
-    successDiv.className = 'success-message';
-    successDiv.style.display = 'none';
-    form.appendChild(successDiv);
-
     const verifyBtn = document.createElement('button');
     verifyBtn.type = 'submit';
     verifyBtn.textContent = 'Verify Email';
@@ -261,12 +234,9 @@ export function renderVerifyEmail(): HTMLElement {
         e.preventDefault();
 
         const otp = otpInput.value;
-        errorDiv.style.display = 'none';
-        successDiv.style.display = 'none';
 
         if (otp.length !== 6) {
-            errorDiv.textContent = 'Please enter a valid 6-digit code';
-            errorDiv.style.display = 'block';
+            showToast('Please enter a valid 6-digit code', 'error');
             return;
         }
 
@@ -281,23 +251,20 @@ export function renderVerifyEmail(): HTMLElement {
             });
 
             if (!response.success) {
-                errorDiv.textContent = response.error.message || 'Invalid code';
-                errorDiv.style.display = 'block';
+                showToast(response.error.message || 'Invalid code', 'error');
                 return;
             }
 
             localStorage.removeItem('pendingVerificationEmail');
 
-            successDiv.textContent = 'Email verified! Redirecting to login...';
-            successDiv.style.display = 'block';
+            showToast('Email verified! Redirecting to login...', 'success');
 
             setTimeout(() => {
                 window.location.hash = '#/login';
             }, 2000);
 
         } catch (error) {
-            errorDiv.textContent = 'Verification failed';
-            errorDiv.style.display = 'block';
+            showToast('Verification failed', 'error');
             console.error('Verification error:', error);
         } finally {
             verifyBtn.disabled = false;
@@ -306,9 +273,6 @@ export function renderVerifyEmail(): HTMLElement {
     });
 
     resendBtn.addEventListener('click', async () => {
-        errorDiv.style.display = 'none';
-        successDiv.style.display = 'none';
-
         resendBtn.disabled = true;
         resendBtn.textContent = 'Sending...';
 
@@ -316,17 +280,14 @@ export function renderVerifyEmail(): HTMLElement {
             const response = await resendOTP(email);
 
             if (!response.success) {
-                errorDiv.textContent = 'Failed to resend code';
-                errorDiv.style.display = 'block';
+                showToast('Failed to resend code', 'error');
                 return;
             }
 
-            successDiv.textContent = 'Code resent! Check your email.';
-            successDiv.style.display = 'block';
+            showToast('Code resent! Check your email.', 'success');
 
         } catch (error) {
-            errorDiv.textContent = 'Failed to resend code';
-            errorDiv.style.display = 'block';
+            showToast('Failed to resend code', 'error');
         } finally {
             resendBtn.disabled = false;
             resendBtn.textContent = 'Resend Code';

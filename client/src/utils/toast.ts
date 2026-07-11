@@ -20,10 +20,13 @@ function ensureContainer(): HTMLElement {
   return container;
 }
 
-const COLORS: Record<ToastType, { bg: string; border: string; text: string }> = {
-  success: { bg: '#f0fff4', border: '#28a745', text: '#155724' },
-  error:   { bg: '#fff5f5', border: '#dc3545', text: '#721c24' },
-  info:    { bg: '#f9fff3', border: '#636b2f', text: '#1a1a1a' },
+const OLIVE_CARD_BG = '#f4f6ea';
+const OLIVE_CARD_BORDER = '#dde2c8';
+
+const COLORS: Record<ToastType, { borderBottom: string; text: string; icon: string }> = {
+  success: { borderBottom: '#28a745', text: '#3a4014', icon: '✓' },
+  error:   { borderBottom: '#dc3545', text: '#3a4014', icon: '✕' },
+  info:    { borderBottom: '#636b2f', text: '#3a4014', icon: 'ℹ' },
 };
 
 export function showToast(message: string, type: ToastType = 'info', durationMs = 4000): void {
@@ -32,22 +35,48 @@ export function showToast(message: string, type: ToastType = 'info', durationMs 
 
   const toast = document.createElement('div');
   toast.style.cssText = `
-    background: ${c.bg};
-    border-left: 4px solid ${c.border};
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: ${OLIVE_CARD_BG};
+    border: 1px solid ${OLIVE_CARD_BORDER};
+    border-bottom: 4px solid ${c.borderBottom};
     color: ${c.text};
-    padding: 12px 18px;
-    border-radius: 8px;
+    padding: 13px 18px;
+    border-radius: 10px;
     font-size: 0.9rem;
     font-weight: 500;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    max-width: 340px;
+    box-shadow: 0 8px 24px rgba(74, 81, 34, 0.15);
+    max-width: 360px;
     pointer-events: auto;
     opacity: 0;
     transform: translateY(8px);
     transition: opacity 0.25s ease, transform 0.25s ease;
   `;
-  toast.textContent = message;
+
+  const icon = document.createElement('span');
+  icon.textContent = c.icon;
+  icon.style.cssText = `
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: ${c.borderBottom};
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+  toast.appendChild(icon);
+
+  const text = document.createElement('span');
+  text.textContent = message;
+  text.style.cssText = 'flex: 1; line-height: 1.4;';
+  toast.appendChild(text);
+
   container.appendChild(toast);
 
   requestAnimationFrame(() => {

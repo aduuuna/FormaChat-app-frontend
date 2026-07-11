@@ -1,4 +1,5 @@
 import { requestPasswordReset, confirmPasswordReset } from '../../services/auth.service';
+import { showToast } from '../../utils/toast';
 
 function injectForgotPasswordStyles() {
   if (document.getElementById('forgot-password-styles')) return;
@@ -70,26 +71,6 @@ function injectForgotPasswordStyles() {
     }
     .forgot-btn:hover { background: #4a5122; }
     .forgot-btn:disabled { opacity: 0.65; cursor: not-allowed; }
-    .forgot-error {
-      background: #fff5f5;
-      border-left: 3px solid #dc3545;
-      padding: 10px 14px;
-      border-radius: 6px;
-      color: #dc3545;
-      font-size: 0.88rem;
-      margin-bottom: 16px;
-      display: none;
-    }
-    .forgot-success {
-      background: #f0fff4;
-      border-left: 3px solid #28a745;
-      padding: 10px 14px;
-      border-radius: 6px;
-      color: #155724;
-      font-size: 0.88rem;
-      margin-bottom: 16px;
-      display: none;
-    }
     .forgot-link {
       display: block;
       text-align: center;
@@ -125,10 +106,6 @@ export function renderForgotPassword(): HTMLElement {
   subtitle1.className = 'forgot-subtitle';
   subtitle1.textContent = 'Enter the email address on your account and we\'ll send you a reset code.';
   step1.appendChild(subtitle1);
-
-  const errorDiv1 = document.createElement('div');
-  errorDiv1.className = 'forgot-error';
-  step1.appendChild(errorDiv1);
 
   const emailGroup = document.createElement('div');
   emailGroup.className = 'forgot-form-group';
@@ -171,14 +148,6 @@ export function renderForgotPassword(): HTMLElement {
   subtitle2.id = 'forgot-subtitle2';
   subtitle2.textContent = 'Enter the code we sent to your email and choose a new password.';
   step2.appendChild(subtitle2);
-
-  const errorDiv2 = document.createElement('div');
-  errorDiv2.className = 'forgot-error';
-  step2.appendChild(errorDiv2);
-
-  const successDiv2 = document.createElement('div');
-  successDiv2.className = 'forgot-success';
-  step2.appendChild(successDiv2);
 
   const otpGroup = document.createElement('div');
   otpGroup.className = 'forgot-form-group';
@@ -223,7 +192,6 @@ export function renderForgotPassword(): HTMLElement {
     e.preventDefault();
     step2.style.display = 'none';
     step1.style.display = '';
-    errorDiv1.style.display = 'none';
   });
   step2.appendChild(backToStep1);
 
@@ -234,27 +202,24 @@ export function renderForgotPassword(): HTMLElement {
   sendBtn.addEventListener('click', async () => {
     const email = emailInput.value.trim();
     if (!email) {
-      errorDiv1.textContent = 'Please enter your email address.';
-      errorDiv1.style.display = 'block';
+      showToast('Please enter your email address.', 'error');
       return;
     }
-    errorDiv1.style.display = 'none';
     sendBtn.disabled = true;
     sendBtn.textContent = 'Sending...';
 
     try {
       const response = await requestPasswordReset(email);
       if (!response.success) {
-        errorDiv1.textContent = (response as any).error?.message || 'Failed to send reset code.';
-        errorDiv1.style.display = 'block';
+        showToast((response as any).error?.message || 'Failed to send reset code.', 'error');
       } else {
         subtitle2.textContent = `We sent a 6-digit code to ${email}. Enter it below along with your new password.`;
         step1.style.display = 'none';
         step2.style.display = '';
+        showToast('Reset code sent!', 'success');
       }
     } catch {
-      errorDiv1.textContent = 'Something went wrong. Please try again.';
-      errorDiv1.style.display = 'block';
+      showToast('Something went wrong. Please try again.', 'error');
     } finally {
       sendBtn.disabled = false;
       sendBtn.textContent = 'Send Reset Code';
@@ -268,33 +233,27 @@ export function renderForgotPassword(): HTMLElement {
     const newPassword = pwInput.value;
 
     if (!otp || otp.length < 6) {
-      errorDiv2.textContent = 'Please enter the 6-digit code from your email.';
-      errorDiv2.style.display = 'block';
+      showToast('Please enter the 6-digit code from your email.', 'error');
       return;
     }
     if (!newPassword || newPassword.length < 8) {
-      errorDiv2.textContent = 'Password must be at least 8 characters.';
-      errorDiv2.style.display = 'block';
+      showToast('Password must be at least 8 characters.', 'error');
       return;
     }
-    errorDiv2.style.display = 'none';
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Resetting...';
 
     try {
       const response = await confirmPasswordReset(email, otp, newPassword);
       if (!response.success) {
-        errorDiv2.textContent = (response as any).error?.message || 'Failed to reset password.';
-        errorDiv2.style.display = 'block';
+        showToast((response as any).error?.message || 'Failed to reset password.', 'error');
       } else {
-        successDiv2.textContent = 'Password reset successfully. Redirecting to login...';
-        successDiv2.style.display = 'block';
+        showToast('Password reset successfully. Redirecting to login...', 'success');
         confirmBtn.style.display = 'none';
         setTimeout(() => { window.location.hash = '#/login'; }, 2000);
       }
     } catch {
-      errorDiv2.textContent = 'Something went wrong. Please try again.';
-      errorDiv2.style.display = 'block';
+      showToast('Something went wrong. Please try again.', 'error');
     } finally {
       confirmBtn.disabled = false;
       if (confirmBtn.textContent === 'Resetting...') confirmBtn.textContent = 'Reset Password';

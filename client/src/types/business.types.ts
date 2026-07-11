@@ -150,6 +150,12 @@ export interface FreezeInfo {
   autoUnfreezeAt?: Date;
 }
 
+export interface WidgetConfig {
+  primaryColor?: string;
+  position?: 'bottom-left' | 'bottom-right';
+  avatarUrl?: string;
+}
+
 export interface Business {
   _id: string;
   userId: string;
@@ -161,6 +167,7 @@ export interface Business {
   customerSupport: CustomerSupport;
   contactEscalation: ContactEscalation;
   webhookUrl?: string;
+  widgetConfig?: WidgetConfig;
   files?: Files;
   vectorInfo: VectorInfo;
   createdAt: Date;
@@ -182,6 +189,7 @@ export interface UpdateBusinessRequest {
   customerSupport?: Partial<CustomerSupport>;
   contactEscalation?: Partial<ContactEscalation>;
   webhookUrl?: string;
+  widgetConfig?: Partial<WidgetConfig>;
 }
 
 export interface BusinessListResponse {

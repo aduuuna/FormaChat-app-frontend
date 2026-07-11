@@ -1,7 +1,19 @@
 import { createBreadcrumb } from '../../../components/breadcrumb';
 import { createLoadingSpinner, hideLoadingSpinner } from '../../../components/loading-spinner';
-import { getBusinessById, getBusinessHealthScore } from '../../../services/business.service';
-import { showModal } from '../../../components/modal';
+import {
+  getBusinessById,
+  getBusinessHealthScore,
+  updateBusiness,
+  getWebhookEvents,
+  listWebhooks,
+  createWebhook,
+  deleteWebhook,
+  listWebhookDeliveries,
+  retryWebhookDelivery,
+  type Webhook,
+} from '../../../services/business.service';
+import { showModal, closeAllModals } from '../../../components/modal';
+import { showToast } from '../../../utils/toast';
 import QRCode from 'qrcode';
 
 function injectChannelStyles() {
@@ -420,18 +432,39 @@ export async function renderChannelsDetail(businessId: string): Promise<HTMLElem
     `;
     const testBtn = document.createElement('button');
     testBtn.className = 'test-bot-btn';
-    testBtn.innerHTML = `
-      <span>Launch Simulator</span> 
+    const testBtnLabel = document.createElement('span');
+    testBtnLabel.textContent = 'Launch Simulator';
+    testBtn.appendChild(testBtnLabel);
+    testBtn.insertAdjacentHTML('beforeend', `
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
         <polyline points="15 3 21 3 21 9"></polyline>
         <line x1="10" y1="14" x2="21" y2="3"></line>
       </svg>
-    `;
-    testBtn.addEventListener('click', () => {
-      window.open(prodChatUrl, '_blank', 'width=450,height=650');
-    });
+    `);
     testCard.appendChild(testBtn);
+
+    // Inline simulator panel - lazy-loads the iframe src only when first opened
+    const simulatorPanel = document.createElement('div');
+    simulatorPanel.style.cssText = 'display:none; margin-top:16px; border-radius:12px; overflow:hidden; border:1px solid #e2e8f0; height:600px; max-width:450px;';
+    const simulatorFrame = document.createElement('iframe');
+    simulatorFrame.style.cssText = 'width:100%; height:100%; border:0;';
+    simulatorFrame.title = 'Chatbot simulator';
+    simulatorPanel.appendChild(simulatorFrame);
+    testCard.appendChild(simulatorPanel);
+
+    let simulatorOpen = false;
+    testBtn.addEventListener('click', () => {
+      simulatorOpen = !simulatorOpen;
+      if (simulatorOpen) {
+        if (!simulatorFrame.src) simulatorFrame.src = prodChatUrl;
+        simulatorPanel.style.display = 'block';
+        testBtnLabel.textContent = 'Close Simulator';
+      } else {
+        simulatorPanel.style.display = 'none';
+        testBtnLabel.textContent = 'Launch Simulator';
+      }
+    });
     grid.appendChild(testCard);
 
     const qrCard = document.createElement('section');
@@ -694,6 +727,16 @@ export async function renderChannelsDetail(businessId: string): Promise<HTMLElem
       grid.appendChild(hsCard);
     } catch { /* health score is non-critical */ }
 
+    // Widget appearance card — best-effort, don't break the page if it fails
+    try {
+      grid.appendChild(renderWidgetAppearanceCard(business));
+    } catch { /* widget appearance is non-critical */ }
+
+    // Webhooks card — best-effort, don't break the page if it fails
+    try {
+      grid.appendChild(await renderWebhooksCard(business._id));
+    } catch { /* webhooks are non-critical */ }
+
     container.appendChild(grid);
 
   } catch (error) {
@@ -748,4 +791,403 @@ function createInputGroup(label: string, value: string): HTMLElement {
   wrapper.appendChild(group);
 
   return wrapper;
+}
+
+function renderWidgetAppearanceCard(business: any): HTMLElement {
+  const card = document.createElement('section');
+  card.className = 'glass-card';
+
+  const title = document.createElement('h2');
+  title.className = 'card-title';
+  title.textContent = 'Widget Appearance';
+  card.appendChild(title);
+
+  const desc = document.createElement('p');
+  desc.className = 'card-desc';
+  desc.textContent = 'Customize how the chat widget looks when embedded on your site.';
+  card.appendChild(desc);
+
+  const current = business.widgetConfig || {};
+
+  const colorField = document.createElement('div');
+  colorField.style.cssText = 'margin:16px 0 14px;';
+  const colorLabel = document.createElement('label');
+  colorLabel.textContent = 'Primary color';
+  colorLabel.style.cssText = 'display:block; font-weight:600; font-size:0.85rem; margin-bottom:6px; color:#1a1a1a;';
+  colorField.appendChild(colorLabel);
+
+  const colorRow = document.createElement('div');
+  colorRow.style.cssText = 'display:flex; align-items:center; gap:10px;';
+  const colorPicker = document.createElement('input');
+  colorPicker.type = 'color';
+  colorPicker.value = current.primaryColor || '#636b2f';
+  colorPicker.style.cssText = 'width:44px; height:36px; border:1px solid #e1e1e1; border-radius:8px; cursor:pointer; padding:2px;';
+  colorRow.appendChild(colorPicker);
+  const colorText = document.createElement('input');
+  colorText.type = 'text';
+  colorText.value = current.primaryColor || '#636b2f';
+  colorText.style.cssText = 'flex:1; padding:9px 12px; border:1px solid #e1e1e1; border-radius:8px; font-size:0.85rem; font-family:monospace;';
+  colorRow.appendChild(colorText);
+  colorPicker.addEventListener('input', () => { colorText.value = colorPicker.value; });
+  colorText.addEventListener('input', () => {
+    if (/^#[0-9a-fA-F]{6}$/.test(colorText.value)) colorPicker.value = colorText.value;
+  });
+  colorField.appendChild(colorRow);
+  card.appendChild(colorField);
+
+  const positionField = document.createElement('div');
+  positionField.style.cssText = 'margin-bottom:14px;';
+  const positionLabel = document.createElement('label');
+  positionLabel.textContent = 'Position';
+  positionLabel.style.cssText = 'display:block; font-weight:600; font-size:0.85rem; margin-bottom:6px; color:#1a1a1a;';
+  positionField.appendChild(positionLabel);
+  const positionSelect = document.createElement('select');
+  positionSelect.style.cssText = 'width:100%; padding:9px 12px; border:1px solid #e1e1e1; border-radius:8px; font-size:0.85rem; background:#fff;';
+  [['bottom-right', 'Bottom right'], ['bottom-left', 'Bottom left']].forEach(([value, label]) => {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = label;
+    if ((current.position || 'bottom-right') === value) opt.selected = true;
+    positionSelect.appendChild(opt);
+  });
+  positionField.appendChild(positionSelect);
+  card.appendChild(positionField);
+
+  const avatarField = document.createElement('div');
+  avatarField.style.cssText = 'margin-bottom:16px;';
+  const avatarLabel = document.createElement('label');
+  avatarLabel.textContent = 'Avatar image URL (optional)';
+  avatarLabel.style.cssText = 'display:block; font-weight:600; font-size:0.85rem; margin-bottom:6px; color:#1a1a1a;';
+  avatarField.appendChild(avatarLabel);
+  const avatarInput = document.createElement('input');
+  avatarInput.type = 'url';
+  avatarInput.placeholder = 'https://...';
+  avatarInput.value = current.avatarUrl || '';
+  avatarInput.style.cssText = 'width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #e1e1e1; border-radius:8px; font-size:0.85rem;';
+  avatarField.appendChild(avatarInput);
+  card.appendChild(avatarField);
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn-secondary';
+  saveBtn.textContent = 'Save Appearance';
+  card.appendChild(saveBtn);
+
+  saveBtn.addEventListener('click', async () => {
+    if (!/^#[0-9a-fA-F]{6}$/.test(colorText.value)) {
+      showToast('Enter a valid hex color (e.g. #636b2f).', 'error');
+      return;
+    }
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    try {
+      await updateBusiness(business._id, {
+        widgetConfig: {
+          primaryColor: colorText.value,
+          position: positionSelect.value as 'bottom-left' | 'bottom-right',
+          avatarUrl: avatarInput.value.trim() || undefined,
+        },
+      });
+      showToast('Widget appearance saved.', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save widget appearance.', 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Appearance';
+    }
+  });
+
+  return card;
+}
+
+const WEBHOOK_STATUS_COLORS: Record<string, string> = {
+  pending: '#d97706',
+  success: '#16a34a',
+  failed: '#dc2626',
+  exhausted: '#6b7280',
+};
+
+async function renderWebhooksCard(businessId: string): Promise<HTMLElement> {
+  const card = document.createElement('section');
+  card.className = 'glass-card full-width';
+
+  const title = document.createElement('h2');
+  title.className = 'card-title';
+  title.textContent = 'Webhooks';
+  card.appendChild(title);
+
+  const desc = document.createElement('p');
+  desc.style.cssText = 'color:#666; font-size:0.9rem; margin:0 0 16px 0;';
+  desc.textContent = 'Get a signed HTTP POST whenever a lead is captured or a session starts/ends. Failed deliveries retry automatically (up to 3 attempts).';
+  card.appendChild(desc);
+
+  const listContainer = document.createElement('div');
+  card.appendChild(listContainer);
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn-secondary';
+  addBtn.textContent = '+ Add Webhook';
+  addBtn.style.marginTop = '12px';
+  card.appendChild(addBtn);
+
+  const validEvents = await getWebhookEvents().catch(() => ['lead.captured', 'session.started', 'session.ended']);
+
+  const renderList = async () => {
+    listContainer.innerHTML = '<p style="color:#999; font-size:0.85rem;">Loading webhooks...</p>';
+    try {
+      const webhooks = await listWebhooks(businessId);
+
+      if (webhooks.length === 0) {
+        listContainer.innerHTML = '<p style="color:#999; font-size:0.85rem; margin:0;">No webhooks configured yet.</p>';
+        return;
+      }
+
+      listContainer.innerHTML = '';
+      webhooks.forEach(webhook => listContainer.appendChild(renderWebhookRow(businessId, webhook, renderList)));
+    } catch {
+      listContainer.innerHTML = '<p style="color:#dc2626; font-size:0.85rem;">Failed to load webhooks.</p>';
+    }
+  };
+
+  addBtn.addEventListener('click', () => {
+    openAddWebhookModal(businessId, validEvents, renderList);
+  });
+
+  await renderList();
+
+  return card;
+}
+
+function renderWebhookRow(businessId: string, webhook: Webhook, onChange: () => void): HTMLElement {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid #f0f0f0; flex-wrap:wrap;';
+
+  const info = document.createElement('div');
+  info.style.cssText = 'min-width:0; flex:1;';
+
+  const urlRow = document.createElement('div');
+  urlRow.style.cssText = 'display:flex; align-items:center; gap:8px; font-size:0.88rem; font-weight:600; color:#1a1a1a; word-break:break-all;';
+  const statusDot = document.createElement('span');
+  statusDot.style.cssText = `display:inline-block; width:8px; height:8px; border-radius:50%; background:${webhook.isActive ? '#16a34a' : '#9ca3af'}; flex-shrink:0;`;
+  urlRow.appendChild(statusDot);
+  const urlText = document.createElement('span');
+  urlText.textContent = webhook.url;
+  urlRow.appendChild(urlText);
+  info.appendChild(urlRow);
+
+  const eventsRow = document.createElement('div');
+  eventsRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;';
+  webhook.events.forEach(evt => {
+    const badge = document.createElement('span');
+    badge.style.cssText = 'background:#f4f6ea; border:1px solid #dde2c8; color:#3a4014; border-radius:999px; padding:2px 9px; font-size:0.74rem; font-weight:600;';
+    badge.textContent = evt;
+    eventsRow.appendChild(badge);
+  });
+  info.appendChild(eventsRow);
+
+  row.appendChild(info);
+
+  const actions = document.createElement('div');
+  actions.style.cssText = 'display:flex; gap:8px; flex-shrink:0;';
+
+  const historyBtn = document.createElement('button');
+  historyBtn.className = 'btn-secondary';
+  historyBtn.style.cssText = 'padding:7px 12px; font-size:0.82rem;';
+  historyBtn.textContent = 'History';
+  historyBtn.addEventListener('click', () => openDeliveryHistoryModal(businessId, webhook));
+  actions.appendChild(historyBtn);
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'btn-secondary';
+  deleteBtn.style.cssText = 'padding:7px 12px; font-size:0.82rem; color:#dc2626; border-color:#fecaca;';
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.addEventListener('click', async () => {
+    if (!window.confirm('Delete this webhook? This cannot be undone.')) return;
+    deleteBtn.disabled = true;
+    try {
+      await deleteWebhook(businessId, webhook.id);
+      showToast('Webhook deleted.', 'success');
+      onChange();
+    } catch {
+      showToast('Failed to delete webhook.', 'error');
+      deleteBtn.disabled = false;
+    }
+  });
+  actions.appendChild(deleteBtn);
+
+  row.appendChild(actions);
+
+  return row;
+}
+
+function openAddWebhookModal(businessId: string, validEvents: string[], onCreated: () => void) {
+  const content = document.createElement('div');
+
+  const urlLabel = document.createElement('label');
+  urlLabel.textContent = 'Endpoint URL';
+  urlLabel.style.cssText = 'display:block; font-weight:600; font-size:0.85rem; margin-bottom:6px; color:#1a1a1a;';
+  content.appendChild(urlLabel);
+
+  const urlInput = document.createElement('input');
+  urlInput.type = 'url';
+  urlInput.placeholder = 'https://your-app.com/webhooks/formachat';
+  urlInput.style.cssText = 'width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #e1e1e1; border-radius:8px; font-size:0.9rem; margin-bottom:16px;';
+  content.appendChild(urlInput);
+
+  const eventsLabel = document.createElement('label');
+  eventsLabel.textContent = 'Events';
+  eventsLabel.style.cssText = 'display:block; font-weight:600; font-size:0.85rem; margin-bottom:8px; color:#1a1a1a;';
+  content.appendChild(eventsLabel);
+
+  const checkboxes: HTMLInputElement[] = [];
+  validEvents.forEach(evt => {
+    const row = document.createElement('label');
+    row.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:0.88rem; color:#333; cursor:pointer;';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = true;
+    checkbox.value = evt;
+    checkboxes.push(checkbox);
+    row.appendChild(checkbox);
+    row.appendChild(document.createTextNode(evt));
+    content.appendChild(row);
+  });
+
+  const createBtn = document.createElement('button');
+  createBtn.className = 'btn-secondary';
+  createBtn.textContent = 'Create Webhook';
+  createBtn.style.cssText = 'margin-top:12px; width:100%;';
+  content.appendChild(createBtn);
+
+  createBtn.addEventListener('click', async () => {
+    const url = urlInput.value.trim();
+    if (!url || !/^https?:\/\//.test(url)) {
+      showToast('Enter a valid http(s) URL.', 'error');
+      return;
+    }
+    const events = checkboxes.filter(c => c.checked).map(c => c.value);
+    if (events.length === 0) {
+      showToast('Select at least one event.', 'error');
+      return;
+    }
+
+    createBtn.disabled = true;
+    createBtn.textContent = 'Creating...';
+
+    try {
+      const webhook = await createWebhook(businessId, url, events);
+      closeAllModals();
+      showToast('Webhook created!', 'success');
+      onCreated();
+
+      if (webhook.secret) {
+        setTimeout(() => openSecretRevealModal(webhook.secret!), 300);
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to create webhook.', 'error');
+      createBtn.disabled = false;
+      createBtn.textContent = 'Create Webhook';
+    }
+  });
+
+  showModal({ title: 'Add Webhook', content });
+}
+
+function openSecretRevealModal(secret: string) {
+  const content = document.createElement('div');
+
+  const warning = document.createElement('p');
+  warning.style.cssText = 'color:#856404; background:#fff8f0; border-left:3px solid #e8a23a; padding:10px 14px; border-radius:6px; font-size:0.85rem; margin:0 0 14px 0;';
+  warning.textContent = 'Save this signing secret now - it will not be shown again. Use it to verify the X-FormaChat-Signature header on incoming deliveries.';
+  content.appendChild(warning);
+
+  const secretBox = document.createElement('div');
+  secretBox.style.cssText = 'display:flex; gap:8px; align-items:center;';
+
+  const secretInput = document.createElement('input');
+  secretInput.type = 'text';
+  secretInput.readOnly = true;
+  secretInput.value = secret;
+  secretInput.style.cssText = 'flex:1; padding:10px 12px; border:1px solid #e1e1e1; border-radius:8px; font-family:monospace; font-size:0.85rem;';
+  secretBox.appendChild(secretInput);
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = 'Copy';
+  copyBtn.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(secret);
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+  });
+  secretBox.appendChild(copyBtn);
+
+  content.appendChild(secretBox);
+
+  showModal({ title: 'Webhook Secret', content });
+}
+
+async function openDeliveryHistoryModal(businessId: string, webhook: Webhook) {
+  const content = document.createElement('div');
+  content.innerHTML = '<p style="color:#999; font-size:0.85rem;">Loading delivery history...</p>';
+  showModal({ title: 'Delivery History', content });
+
+  try {
+    const deliveries = await listWebhookDeliveries(businessId, webhook.id);
+    content.innerHTML = '';
+
+    if (deliveries.length === 0) {
+      content.innerHTML = '<p style="color:#999; font-size:0.85rem;">No deliveries yet.</p>';
+      return;
+    }
+
+    deliveries.forEach(delivery => {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:10px 0; border-bottom:1px solid #f0f0f0;';
+
+      const topRow = document.createElement('div');
+      topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:8px;';
+
+      const eventLabel = document.createElement('span');
+      eventLabel.style.cssText = 'font-weight:600; font-size:0.85rem; color:#1a1a1a;';
+      eventLabel.textContent = delivery.event;
+      topRow.appendChild(eventLabel);
+
+      const statusBadge = document.createElement('span');
+      const color = WEBHOOK_STATUS_COLORS[delivery.status] || '#6b7280';
+      statusBadge.style.cssText = `color:${color}; font-weight:700; font-size:0.78rem; text-transform:uppercase;`;
+      statusBadge.textContent = `${delivery.status}${delivery.httpStatus ? ` (${delivery.httpStatus})` : ''}`;
+      topRow.appendChild(statusBadge);
+
+      row.appendChild(topRow);
+
+      const meta = document.createElement('div');
+      meta.style.cssText = 'font-size:0.78rem; color:#888; margin-top:3px;';
+      const when = new Date(delivery.createdAt).toLocaleString();
+      meta.textContent = `${when} · attempt ${delivery.attempt}/${delivery.maxAttempts}${delivery.error ? ` · ${delivery.error}` : ''}`;
+      row.appendChild(meta);
+
+      if (delivery.status === 'failed' || delivery.status === 'exhausted') {
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'copy-btn';
+        retryBtn.textContent = 'Retry now';
+        retryBtn.style.marginTop = '6px';
+        retryBtn.addEventListener('click', async () => {
+          retryBtn.disabled = true;
+          try {
+            await retryWebhookDelivery(businessId, delivery.id);
+            showToast('Retry attempted.', 'success');
+            closeAllModals();
+            openDeliveryHistoryModal(businessId, webhook);
+          } catch {
+            showToast('Retry failed.', 'error');
+            retryBtn.disabled = false;
+          }
+        });
+        row.appendChild(retryBtn);
+      }
+
+      content.appendChild(row);
+    });
+  } catch {
+    content.innerHTML = '<p style="color:#dc2626; font-size:0.85rem;">Failed to load delivery history.</p>';
+  }
 }

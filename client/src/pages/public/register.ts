@@ -1,5 +1,6 @@
 import { register, verifyEmail, resendOTP } from '../../services/auth.service';
 import { OTPType } from '../../types/auth.types';
+import { showToast } from '../../utils/toast';
 
 let registeredEmail = '';
 
@@ -119,15 +120,6 @@ function injectRegisterStyles() {
         }
 
         /* 5. Messages and Links */
-        .error-message {
-            color: var(--error-red);
-            margin-bottom: 15px;
-            padding: 8px;
-            border-left: 3px solid var(--error-red);
-            background: rgba(220, 53, 69, 0.05);
-            border-radius: 4px;
-        }
-        
         .success-message {
             color: var(--success-green);
             margin-bottom: 15px;
@@ -243,15 +235,10 @@ function createRegisterForm(container: HTMLElement): HTMLElement {
     
     form.appendChild(passwordDiv);
 
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message'; 
-    errorDiv.style.display = 'none';
-    form.appendChild(errorDiv);
-
     const submitBtn = document.createElement('button');
     submitBtn.type = 'submit';
     submitBtn.textContent = 'Create Free Account';
-    submitBtn.className = 'btn btn-primary'; 
+    submitBtn.className = 'btn btn-primary';
     form.appendChild(submitBtn);
 
     form.addEventListener('submit', async (e) => {
@@ -262,11 +249,8 @@ function createRegisterForm(container: HTMLElement): HTMLElement {
         const firstName = formData.get('firstName') as string;
         const lastName = formData.get('lastName') as string;
 
-        errorDiv.style.display = 'none';
-
         if (password.length < 8) {
-            errorDiv.textContent = 'Password must be at least 8 characters';
-            errorDiv.style.display = 'block';
+            showToast('Password must be at least 8 characters', 'error');
             return;
         }
 
@@ -277,26 +261,25 @@ function createRegisterForm(container: HTMLElement): HTMLElement {
             const response = await register({ email, password, firstName, lastName });
 
             if (!response.success) {
-                errorDiv.textContent = response.error.message || 'Registration failed';
-                errorDiv.style.display = 'block';
+                showToast(response.error.message || 'Registration failed', 'error');
                 return;
             }
 
             registeredEmail = email;
             form.style.display = 'none';
-            
+            showToast('Account created! Check your email for a verification code.', 'success');
+
             const otpSection = container.querySelector('#otpSection') as HTMLElement;
             if (otpSection) {
                 otpSection.style.display = 'block';
             }
 
         } catch (error) {
-            errorDiv.textContent = 'An unexpected error occurred';
-            errorDiv.style.display = 'block';
+            showToast('An unexpected error occurred', 'error');
             console.error('Register error:', error);
         } finally {
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Start Free Beta Access';
+            submitBtn.textContent = 'Create Free Account';
         }
     });
 
@@ -333,16 +316,6 @@ function createOTPSection(): HTMLElement {
 
     form.appendChild(otpDiv);
 
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.style.display = 'none';
-    form.appendChild(errorDiv);
-
-    const successDiv = document.createElement('div');
-    successDiv.className = 'success-message';
-    successDiv.style.display = 'none';
-    form.appendChild(successDiv);
-
     const verifyBtn = document.createElement('button');
     verifyBtn.type = 'submit';
     verifyBtn.textContent = 'Verify Email';
@@ -358,12 +331,9 @@ function createOTPSection(): HTMLElement {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const otp = otpInput.value;
-        errorDiv.style.display = 'none';
-        successDiv.style.display = 'none';
 
         if (otp.length !== 6) {
-            errorDiv.textContent = 'Please enter a valid 6-digit code';
-            errorDiv.style.display = 'block';
+            showToast('Please enter a valid 6-digit code', 'error');
             return;
         }
 
@@ -378,21 +348,18 @@ function createOTPSection(): HTMLElement {
             });
 
             if (!response.success) {
-                errorDiv.textContent = response.error.message || 'Invalid code';
-                errorDiv.style.display = 'block';
+                showToast(response.error.message || 'Invalid code', 'error');
                 return;
             }
 
-            successDiv.textContent = 'Email verified! Redirecting to login...';
-            successDiv.style.display = 'block';
+            showToast('Email verified! Redirecting to login...', 'success');
 
             setTimeout(() => {
                 window.location.hash = '#/login';
             }, 2000);
 
         } catch (error) {
-            errorDiv.textContent = 'Verification failed';
-            errorDiv.style.display = 'block';
+            showToast('Verification failed', 'error');
             console.error('OTP verification error:', error);
         } finally {
             verifyBtn.disabled = false;
@@ -402,9 +369,6 @@ function createOTPSection(): HTMLElement {
 
 
     resendBtn.addEventListener('click', async () => {
-        errorDiv.style.display = 'none';
-        successDiv.style.display = 'none';
-
         resendBtn.disabled = true;
         resendBtn.textContent = 'Sending...';
 
@@ -412,17 +376,14 @@ function createOTPSection(): HTMLElement {
             const response = await resendOTP(registeredEmail);
 
             if (!response.success) {
-                errorDiv.textContent = 'Failed to resend code';
-                errorDiv.style.display = 'block';
+                showToast('Failed to resend code', 'error');
                 return;
             }
 
-            successDiv.textContent = 'Code resent! Check your email.';
-            successDiv.style.display = 'block';
+            showToast('Code resent! Check your email.', 'success');
 
         } catch (error) {
-            errorDiv.textContent = 'Failed to resend code';
-            errorDiv.style.display = 'block';
+            showToast('Failed to resend code', 'error');
         } finally {
             resendBtn.disabled = false;
             resendBtn.textContent = 'Resend Code';

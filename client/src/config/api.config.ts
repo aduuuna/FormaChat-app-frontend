@@ -38,6 +38,11 @@ export const BUSINESS_ENDPOINTS = {
   DELETE: (id: string) => `${API_BASE_URLS.BUSINESS}/businesses/${id}`,
   PUBLIC_DETAILS: (id: string) => `${API_BASE_URLS.BUSINESS}/businesses/public/${id}`,
   HEALTH_SCORE: (id: string) => `${API_BASE_URLS.BUSINESS}/businesses/${id}/health-score`,
+  WEBHOOK_EVENTS: `${API_BASE_URLS.BUSINESS}/webhook-events`,
+  WEBHOOKS: (businessId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/webhooks`,
+  WEBHOOK_DETAIL: (businessId: string, webhookId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/webhooks/${webhookId}`,
+  WEBHOOK_DELIVERIES: (businessId: string, webhookId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/webhooks/${webhookId}/deliveries`,
+  WEBHOOK_DELIVERY_RETRY: (businessId: string, deliveryId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/webhooks/deliveries/${deliveryId}/retry`,
 } as const;
 
 export const CHAT_ENDPOINTS = {
