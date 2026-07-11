@@ -5,6 +5,7 @@ import type { ApiResponse } from '../config/api.config';
 import {
   type LoginRequest,
   type LoginResponse,
+  type LoginSuccessResponse,
   type RegisterRequest,
   type RegisterResponse,
   type VerifyEmailRequest,
@@ -115,7 +116,50 @@ export const confirmPasswordReset = async (
 ): Promise<ApiResponse<any>> => {
   return await apiPost(
     AUTH_ENDPOINTS.PASSWORD_RESET_CONFIRM,
-    { email, otp, newPassword },
+    { email, otp, newPassword, confirmPassword: newPassword },
+    { skipAuth: true }
+  );
+};
+
+
+export const verifyTwoFactorLogin = async (
+  userId: string,
+  otp: string
+): Promise<ApiResponse<LoginSuccessResponse>> => {
+  return await apiPost<LoginSuccessResponse>(
+    AUTH_ENDPOINTS.LOGIN_2FA_VERIFY,
+    { userId, otp },
+    { skipAuth: true }
+  );
+};
+
+
+export const enableTwoFactor = async (password: string): Promise<ApiResponse<any>> => {
+  return await apiPost(AUTH_ENDPOINTS.TWO_FA_ENABLE, { password });
+};
+
+
+export const disableTwoFactor = async (password: string): Promise<ApiResponse<any>> => {
+  return await apiPost(AUTH_ENDPOINTS.TWO_FA_DISABLE, { password });
+};
+
+
+export const requestMagicLink = async (email: string): Promise<ApiResponse<any>> => {
+  return await apiPost(
+    AUTH_ENDPOINTS.MAGIC_LINK_REQUEST,
+    { email },
+    { skipAuth: true }
+  );
+};
+
+
+export const verifyMagicLink = async (
+  email: string,
+  token: string
+): Promise<ApiResponse<LoginSuccessResponse>> => {
+  return await apiPost<LoginSuccessResponse>(
+    AUTH_ENDPOINTS.MAGIC_LINK_VERIFY,
+    { email, token },
     { skipAuth: true }
   );
 };

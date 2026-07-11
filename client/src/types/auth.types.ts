@@ -8,6 +8,7 @@ export interface User {
   lastLoginAt?: Date;
   createdAt: Date;
   source?: string;
+  twoFactorEnabled?: boolean;
 }
 
 
@@ -23,10 +24,23 @@ export interface LoginRequest {
 }
 
 
-export interface LoginResponse {
+export interface LoginSuccessResponse {
   user: User;
   tokens: AuthTokens;
 }
+
+export interface LoginRequiresTwoFactorResponse {
+  requiresTwoFactor: true;
+  userId: string;
+}
+
+export type LoginResponse = LoginSuccessResponse | LoginRequiresTwoFactorResponse;
+
+export const isTwoFactorRequired = (
+  data: LoginResponse
+): data is LoginRequiresTwoFactorResponse => {
+  return (data as LoginRequiresTwoFactorResponse).requiresTwoFactor === true;
+};
 
 
 export interface RegisterRequest {

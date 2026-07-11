@@ -1,5 +1,6 @@
-import { login } from '../../services/auth.service';
+import { login, verifyTwoFactorLogin, requestMagicLink } from '../../services/auth.service';
 import { saveTokens, saveUser } from '../../utils/auth.utils';
+import { isTwoFactorRequired } from '../../types/auth.types';
 
 function injectLoginStyles() {
    
@@ -287,12 +288,192 @@ export function renderLogin(): HTMLElement {
     forgotLink.appendChild(forgotAnchor);
     form.appendChild(forgotLink);
 
+    const magicLinkTrigger = document.createElement('div');
+    magicLinkTrigger.style.cssText = 'text-align:right; margin-bottom:16px;';
+    const magicLinkAnchor = document.createElement('a');
+    magicLinkAnchor.href = '#';
+    magicLinkAnchor.textContent = 'Email me a login link instead';
+    magicLinkAnchor.style.cssText = 'font-size:0.82rem; color:#666; font-weight:600; text-decoration:none;';
+    magicLinkTrigger.appendChild(magicLinkAnchor);
+    form.appendChild(magicLinkTrigger);
+
     // === SUBMIT BUTTON ===
     const submitBtn = document.createElement('button');
     submitBtn.type = 'submit';
     submitBtn.textContent = 'Sign In';
     submitBtn.className = 'btn-submit';
     form.appendChild(submitBtn);
+
+    // === 2FA STEP (hidden until required) ===
+    const otpStep = document.createElement('div');
+    otpStep.style.display = 'none';
+
+    const otpSubtitle = document.createElement('p');
+    otpSubtitle.className = 'login-subtitle';
+    otpSubtitle.textContent = 'Enter the 6-digit code we emailed you to finish signing in.';
+    otpStep.appendChild(otpSubtitle);
+
+    const otpDiv = document.createElement('div');
+    otpDiv.className = 'form-group';
+    const otpLabel = document.createElement('label');
+    otpLabel.textContent = 'Verification code';
+    otpLabel.className = 'form-label';
+    const otpInput = document.createElement('input');
+    otpInput.type = 'text';
+    otpInput.inputMode = 'numeric';
+    otpInput.maxLength = 6;
+    otpInput.className = 'form-input';
+    otpInput.placeholder = '000000';
+    otpDiv.appendChild(otpLabel);
+    otpDiv.appendChild(otpInput);
+    otpStep.appendChild(otpDiv);
+
+    const otpErrorDiv = document.createElement('div');
+    otpErrorDiv.className = 'error-message';
+    otpErrorDiv.style.display = 'none';
+    otpStep.appendChild(otpErrorDiv);
+
+    const otpSubmitBtn = document.createElement('button');
+    otpSubmitBtn.type = 'button';
+    otpSubmitBtn.textContent = 'Verify & Sign In';
+    otpSubmitBtn.className = 'btn-submit';
+    otpStep.appendChild(otpSubmitBtn);
+
+    let pendingUserId: string | null = null;
+
+    const completeSuccessfulLogin = (data: { user: any; tokens: any }) => {
+        saveTokens(data.tokens);
+        saveUser(data.user);
+        setTimeout(() => {
+            window.location.hash = '#/dashboard';
+        }, 500);
+    };
+
+    otpSubmitBtn.addEventListener('click', async () => {
+        const otp = otpInput.value.trim();
+        if (!pendingUserId) return;
+        if (!/^\d{6}$/.test(otp)) {
+            otpErrorDiv.textContent = 'Enter the 6-digit code from your email.';
+            otpErrorDiv.style.display = 'block';
+            return;
+        }
+
+        otpErrorDiv.style.display = 'none';
+        otpSubmitBtn.disabled = true;
+        otpSubmitBtn.textContent = 'Verifying...';
+
+        try {
+            const response = await verifyTwoFactorLogin(pendingUserId, otp);
+            if (!response.success) {
+                otpErrorDiv.textContent = response.error.message || 'Invalid or expired code.';
+                otpErrorDiv.style.display = 'block';
+                return;
+            }
+
+            otpSubmitBtn.textContent = 'Success!';
+            otpSubmitBtn.style.background = '#28a745';
+            completeSuccessfulLogin(response.data);
+        } catch {
+            otpErrorDiv.textContent = 'An unexpected error occurred. Please try again.';
+            otpErrorDiv.style.display = 'block';
+        } finally {
+            if (otpSubmitBtn.textContent !== 'Success!') {
+                otpSubmitBtn.disabled = false;
+                otpSubmitBtn.textContent = 'Verify & Sign In';
+            }
+        }
+    });
+
+    // === MAGIC LINK STEP (hidden until requested) ===
+    const magicLinkStep = document.createElement('div');
+    magicLinkStep.style.display = 'none';
+
+    const magicLinkSubtitle = document.createElement('p');
+    magicLinkSubtitle.className = 'login-subtitle';
+    magicLinkSubtitle.textContent = "We'll email you a link to sign in - no password needed.";
+    magicLinkStep.appendChild(magicLinkSubtitle);
+
+    const magicLinkEmailDiv = document.createElement('div');
+    magicLinkEmailDiv.className = 'form-group';
+    const magicLinkEmailLabel = document.createElement('label');
+    magicLinkEmailLabel.textContent = 'Email';
+    magicLinkEmailLabel.className = 'form-label';
+    const magicLinkEmailInput = document.createElement('input');
+    magicLinkEmailInput.type = 'email';
+    magicLinkEmailInput.className = 'form-input';
+    magicLinkEmailInput.placeholder = 'name@company.com';
+    magicLinkEmailDiv.appendChild(magicLinkEmailLabel);
+    magicLinkEmailDiv.appendChild(magicLinkEmailInput);
+    magicLinkStep.appendChild(magicLinkEmailDiv);
+
+    const magicLinkErrorDiv = document.createElement('div');
+    magicLinkErrorDiv.className = 'error-message';
+    magicLinkErrorDiv.style.display = 'none';
+    magicLinkStep.appendChild(magicLinkErrorDiv);
+
+    const magicLinkSuccessDiv = document.createElement('div');
+    magicLinkSuccessDiv.style.cssText = 'background:rgba(40,167,69,0.1); color:#28a745; padding:12px; border-radius:6px; font-size:0.9rem; margin-bottom:20px; border-left:3px solid #28a745; display:none;';
+    magicLinkStep.appendChild(magicLinkSuccessDiv);
+
+    const magicLinkSendBtn = document.createElement('button');
+    magicLinkSendBtn.type = 'button';
+    magicLinkSendBtn.textContent = 'Send Sign-In Link';
+    magicLinkSendBtn.className = 'btn-submit';
+    magicLinkStep.appendChild(magicLinkSendBtn);
+
+    const backToPasswordLink = document.createElement('div');
+    backToPasswordLink.style.cssText = 'text-align:center; margin-top:16px;';
+    const backToPasswordAnchor = document.createElement('a');
+    backToPasswordAnchor.href = '#';
+    backToPasswordAnchor.textContent = 'Back to password sign-in';
+    backToPasswordAnchor.style.cssText = 'font-size:0.85rem; color:#636b2f; font-weight:600; text-decoration:none;';
+    backToPasswordAnchor.addEventListener('click', (e) => {
+        e.preventDefault();
+        magicLinkStep.style.display = 'none';
+        form.style.display = '';
+        subtitle.textContent = 'Please enter your details to sign in.';
+    });
+    backToPasswordLink.appendChild(backToPasswordAnchor);
+    magicLinkStep.appendChild(backToPasswordLink);
+
+    magicLinkAnchor.addEventListener('click', (e) => {
+        e.preventDefault();
+        magicLinkEmailInput.value = emailInput.value;
+        form.style.display = 'none';
+        subtitle.textContent = '';
+        magicLinkStep.style.display = '';
+    });
+
+    magicLinkSendBtn.addEventListener('click', async () => {
+        const email = magicLinkEmailInput.value.trim();
+        if (!email) {
+            magicLinkErrorDiv.textContent = 'Please enter your email address.';
+            magicLinkErrorDiv.style.display = 'block';
+            return;
+        }
+        magicLinkErrorDiv.style.display = 'none';
+        magicLinkSendBtn.disabled = true;
+        magicLinkSendBtn.textContent = 'Sending...';
+
+        try {
+            const response = await requestMagicLink(email);
+            if (!response.success) {
+                magicLinkErrorDiv.textContent = response.error.message || 'Failed to send sign-in link.';
+                magicLinkErrorDiv.style.display = 'block';
+                return;
+            }
+            magicLinkSuccessDiv.textContent = `Check ${email} for a link to sign in. It expires in 10 minutes.`;
+            magicLinkSuccessDiv.style.display = 'block';
+            magicLinkEmailDiv.style.display = 'none';
+            magicLinkSendBtn.style.display = 'none';
+        } catch {
+            magicLinkErrorDiv.textContent = 'An unexpected error occurred. Please try again.';
+            magicLinkErrorDiv.style.display = 'block';
+        } finally {
+            magicLinkSendBtn.disabled = false;
+            magicLinkSendBtn.textContent = 'Send Sign-In Link';
+        }
+    });
 
     // === FORM SUBMISSION ===
     form.addEventListener('submit', async (e) => {
@@ -309,7 +490,7 @@ export function renderLogin(): HTMLElement {
             const response = await login({ email, password });
 
             if (!response.success) {
-             
+
                 if (response.error.code === 'EMAIL_NOT_VERIFIED') {
                     errorDiv.innerHTML = '<strong>Account not verified.</strong><br/>Redirecting to verification...';
                     errorDiv.style.display = 'block';
@@ -327,22 +508,27 @@ export function renderLogin(): HTMLElement {
                 return;
             }
 
+            if (isTwoFactorRequired(response.data)) {
+                pendingUserId = response.data.userId;
+                form.style.display = 'none';
+                title.textContent = 'Two-Factor Verification';
+                subtitle.textContent = '';
+                otpStep.style.display = '';
+                otpInput.focus();
+                return;
+            }
+
             submitBtn.textContent = 'Success!';
             submitBtn.style.background = '#28a745';
-            
-            saveTokens(response.data.tokens);
-            saveUser(response.data.user);
 
-            setTimeout(() => {
-                window.location.hash = '#/dashboard';
-            }, 500);
+            completeSuccessfulLogin(response.data);
 
         } catch (error: any) {
             errorDiv.textContent = 'An unexpected error occurred. Please try again.';
             errorDiv.style.display = 'block';
             console.error('Login error:', error);
         } finally {
-         
+
             if (submitBtn.textContent !== 'Success!') {
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Sign In';
@@ -351,6 +537,8 @@ export function renderLogin(): HTMLElement {
     });
 
     container.appendChild(form);
+    container.appendChild(otpStep);
+    container.appendChild(magicLinkStep);
 
     // === REGISTER LINK ===
     const registerLink = document.createElement('p');

@@ -1,10 +1,47 @@
 import { createBreadcrumb } from '../../components/breadcrumb';
 import { createLoadingSpinner, hideLoadingSpinner } from '../../components/loading-spinner';
-import { getCurrentUser } from '../../services/auth.service';
-import { getUser, saveUser } from '../../utils/auth.utils';
-import { apiPut } from '../../utils/api.utils';
+import { getCurrentUser, enableTwoFactor, disableTwoFactor } from '../../services/auth.service';
+import { getUser, saveUser, logout as clearLocalAuth } from '../../utils/auth.utils';
+import { apiPut, apiGet, apiDelete } from '../../utils/api.utils';
 import { AUTH_ENDPOINTS } from '../../config/api.config';
 import { showToast } from '../../utils/toast';
+
+interface SessionInfo {
+  id: string;
+  deviceInfo: { userAgent: string; ipAddress: string };
+  createdAt: string;
+  expiresAt: string;
+}
+
+function describeDevice(userAgent: string): string {
+  if (!userAgent) return 'Unknown device';
+  const ua = userAgent.toLowerCase();
+  let browser = 'Unknown browser';
+  if (ua.includes('edg/')) browser = 'Edge';
+  else if (ua.includes('chrome/')) browser = 'Chrome';
+  else if (ua.includes('firefox/')) browser = 'Firefox';
+  else if (ua.includes('safari/')) browser = 'Safari';
+
+  let os = 'Unknown OS';
+  if (ua.includes('windows')) os = 'Windows';
+  else if (ua.includes('mac os')) os = 'macOS';
+  else if (ua.includes('android')) os = 'Android';
+  else if (ua.includes('iphone') || ua.includes('ipad')) os = 'iOS';
+  else if (ua.includes('linux')) os = 'Linux';
+
+  return `${browser} on ${os}`;
+}
+
+function formatDate(value: string): string {
+  try {
+    return new Date(value).toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  } catch {
+    return value;
+  }
+}
 
 function injectSettingsStyles() {
   if (document.getElementById('settings-page-styles')) return;
@@ -84,6 +121,54 @@ function injectSettingsStyles() {
       color: #888;
       margin-top: 4px;
     }
+    .settings-card-danger {
+      border: 1px solid #fecaca;
+    }
+    .settings-card-danger .settings-card-title {
+      color: #dc2626;
+    }
+    .session-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .session-row:last-child { border-bottom: none; }
+    .session-device {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+    .session-meta {
+      font-size: 0.78rem;
+      color: #888;
+      margin-top: 2px;
+    }
+    .session-revoke-btn {
+      padding: 7px 14px;
+      background: #fff;
+      color: #dc2626;
+      border: 1px solid #dc2626;
+      border-radius: 7px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .session-revoke-btn:hover { background: #dc2626; color: #fff; }
+    .session-revoke-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .status-badge-on { background: #e8f5e9; color: #2e7d32; }
+    .status-badge-off { background: #f0f0f0; color: #666; }
   `;
   document.head.appendChild(style);
 }
@@ -266,7 +351,7 @@ export function renderSettingsPage(): HTMLElement {
         changePwBtn.disabled = true;
         changePwBtn.textContent = 'Saving...';
         try {
-          const res = await apiPut(AUTH_ENDPOINTS.PASSWORD_CHANGE, { currentPassword, newPassword });
+          const res = await apiPut(AUTH_ENDPOINTS.PASSWORD_CHANGE, { currentPassword, newPassword, confirmPassword: newPassword });
           if ((res as any).success) {
             currentPwInput.value = '';
             newPwInput.value = '';
@@ -283,6 +368,225 @@ export function renderSettingsPage(): HTMLElement {
       });
       pwCard.appendChild(changePwBtn);
       page.appendChild(pwCard);
+
+      // ---- Two-factor authentication card ----
+      const tfaCard = document.createElement('div');
+      tfaCard.className = 'settings-card';
+
+      const tfaTitle = document.createElement('h2');
+      tfaTitle.className = 'settings-card-title';
+      tfaTitle.textContent = 'Two-Factor Authentication';
+      tfaCard.appendChild(tfaTitle);
+
+      let twoFactorEnabled = !!user.twoFactorEnabled;
+
+      const tfaStatusRow = document.createElement('p');
+      tfaStatusRow.style.cssText = 'margin:0 0 16px 0; font-size:0.9rem; color:#444;';
+      const tfaStatusBadge = document.createElement('span');
+      tfaStatusBadge.className = twoFactorEnabled ? 'status-badge status-badge-on' : 'status-badge status-badge-off';
+      tfaStatusBadge.textContent = twoFactorEnabled ? 'Enabled' : 'Disabled';
+      tfaStatusRow.textContent = 'Status: ';
+      tfaStatusRow.appendChild(tfaStatusBadge);
+      tfaCard.appendChild(tfaStatusRow);
+
+      const tfaHint = document.createElement('p');
+      tfaHint.className = 'settings-hint';
+      tfaHint.style.marginBottom = '16px';
+      tfaHint.textContent = 'When enabled, we will email you a 6-digit code to enter every time you sign in.';
+      tfaCard.appendChild(tfaHint);
+
+      const tfaField = document.createElement('div');
+      tfaField.className = 'settings-field';
+      const tfaLabel = document.createElement('label');
+      tfaLabel.className = 'settings-label';
+      tfaLabel.textContent = 'Current password';
+      const tfaPwInput = document.createElement('input');
+      tfaPwInput.className = 'settings-input';
+      tfaPwInput.type = 'password';
+      tfaPwInput.placeholder = 'Enter current password to confirm';
+      tfaField.appendChild(tfaLabel);
+      tfaField.appendChild(tfaPwInput);
+      tfaCard.appendChild(tfaField);
+
+      const tfaToggleBtn = document.createElement('button');
+      tfaToggleBtn.className = 'settings-btn';
+      tfaToggleBtn.textContent = twoFactorEnabled ? 'Disable Two-Factor Authentication' : 'Enable Two-Factor Authentication';
+      tfaToggleBtn.addEventListener('click', async () => {
+        const password = tfaPwInput.value;
+        if (!password) {
+          showToast('Please enter your password to confirm.', 'error');
+          return;
+        }
+        tfaToggleBtn.disabled = true;
+        tfaToggleBtn.textContent = 'Saving...';
+        try {
+          const res = twoFactorEnabled ? await disableTwoFactor(password) : await enableTwoFactor(password);
+          if ((res as any).success) {
+            twoFactorEnabled = !twoFactorEnabled;
+            tfaPwInput.value = '';
+            tfaStatusBadge.className = twoFactorEnabled ? 'status-badge status-badge-on' : 'status-badge status-badge-off';
+            tfaStatusBadge.textContent = twoFactorEnabled ? 'Enabled' : 'Disabled';
+            tfaToggleBtn.textContent = twoFactorEnabled ? 'Disable Two-Factor Authentication' : 'Enable Two-Factor Authentication';
+            showToast(twoFactorEnabled ? 'Two-factor authentication enabled.' : 'Two-factor authentication disabled.', 'success');
+          } else {
+            showToast((res as any).error?.message || 'Failed to update two-factor authentication.', 'error');
+            tfaToggleBtn.textContent = twoFactorEnabled ? 'Disable Two-Factor Authentication' : 'Enable Two-Factor Authentication';
+          }
+        } catch {
+          showToast('Failed to update two-factor authentication. Please try again.', 'error');
+          tfaToggleBtn.textContent = twoFactorEnabled ? 'Disable Two-Factor Authentication' : 'Enable Two-Factor Authentication';
+        } finally {
+          tfaToggleBtn.disabled = false;
+        }
+      });
+      tfaCard.appendChild(tfaToggleBtn);
+      page.appendChild(tfaCard);
+
+      // ---- Active sessions card ----
+      const sessionsCard = document.createElement('div');
+      sessionsCard.className = 'settings-card';
+
+      const sessionsTitle = document.createElement('h2');
+      sessionsTitle.className = 'settings-card-title';
+      sessionsTitle.textContent = 'Active Sessions';
+      sessionsCard.appendChild(sessionsTitle);
+
+      const sessionsList = document.createElement('div');
+      sessionsCard.appendChild(sessionsList);
+      page.appendChild(sessionsCard);
+
+      const renderSessions = async () => {
+        sessionsList.innerHTML = '';
+        const loadingMsg = document.createElement('p');
+        loadingMsg.className = 'settings-hint';
+        loadingMsg.textContent = 'Loading sessions...';
+        sessionsList.appendChild(loadingMsg);
+
+        try {
+          const sessionsRes = await apiGet<SessionInfo[]>(AUTH_ENDPOINTS.SESSIONS);
+          sessionsList.innerHTML = '';
+
+          if (!sessionsRes.success || !sessionsRes.data || sessionsRes.data.length === 0) {
+            const empty = document.createElement('p');
+            empty.className = 'settings-hint';
+            empty.textContent = 'No active sessions found.';
+            sessionsList.appendChild(empty);
+            return;
+          }
+
+          sessionsRes.data.forEach((session) => {
+            const row = document.createElement('div');
+            row.className = 'session-row';
+
+            const info = document.createElement('div');
+            const device = document.createElement('div');
+            device.className = 'session-device';
+            device.textContent = describeDevice(session.deviceInfo?.userAgent);
+            const meta = document.createElement('div');
+            meta.className = 'session-meta';
+            meta.textContent = `${session.deviceInfo?.ipAddress || 'Unknown IP'} · Signed in ${formatDate(session.createdAt)}`;
+            info.appendChild(device);
+            info.appendChild(meta);
+            row.appendChild(info);
+
+            const revokeBtn = document.createElement('button');
+            revokeBtn.className = 'session-revoke-btn';
+            revokeBtn.textContent = 'Sign out';
+            revokeBtn.addEventListener('click', async () => {
+              revokeBtn.disabled = true;
+              revokeBtn.textContent = 'Signing out...';
+              try {
+                const revokeRes = await apiDelete(AUTH_ENDPOINTS.SESSION_REVOKE(session.id));
+                if ((revokeRes as any).success) {
+                  showToast('Session signed out.', 'success');
+                  await renderSessions();
+                } else {
+                  showToast((revokeRes as any).error?.message || 'Failed to sign out session.', 'error');
+                  revokeBtn.disabled = false;
+                  revokeBtn.textContent = 'Sign out';
+                }
+              } catch {
+                showToast('Failed to sign out session. Please try again.', 'error');
+                revokeBtn.disabled = false;
+                revokeBtn.textContent = 'Sign out';
+              }
+            });
+            row.appendChild(revokeBtn);
+
+            sessionsList.appendChild(row);
+          });
+        } catch {
+          sessionsList.innerHTML = '';
+          const err = document.createElement('p');
+          err.className = 'settings-hint';
+          err.textContent = 'Failed to load sessions.';
+          sessionsList.appendChild(err);
+        }
+      };
+
+      await renderSessions();
+
+      // ---- Danger zone: delete account ----
+      const dangerCard = document.createElement('div');
+      dangerCard.className = 'settings-card settings-card-danger';
+
+      const dangerTitle = document.createElement('h2');
+      dangerTitle.className = 'settings-card-title';
+      dangerTitle.textContent = 'Delete Account';
+      dangerCard.appendChild(dangerTitle);
+
+      const dangerHint = document.createElement('p');
+      dangerHint.className = 'settings-hint';
+      dangerHint.style.marginBottom = '16px';
+      dangerHint.textContent = 'This deactivates your account and signs you out everywhere. Enter your password to confirm.';
+      dangerCard.appendChild(dangerHint);
+
+      const deleteField = document.createElement('div');
+      deleteField.className = 'settings-field';
+      const deleteLabel = document.createElement('label');
+      deleteLabel.className = 'settings-label';
+      deleteLabel.textContent = 'Current password';
+      const deleteInput = document.createElement('input');
+      deleteInput.className = 'settings-input';
+      deleteInput.type = 'password';
+      deleteInput.placeholder = 'Enter current password';
+      deleteField.appendChild(deleteLabel);
+      deleteField.appendChild(deleteInput);
+      dangerCard.appendChild(deleteField);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'settings-btn-danger';
+      deleteBtn.textContent = 'Delete Account';
+      deleteBtn.addEventListener('click', async () => {
+        const password = deleteInput.value;
+        if (!password) {
+          showToast('Please enter your password to confirm.', 'error');
+          return;
+        }
+        if (!window.confirm('Are you sure you want to delete your account? This cannot be undone from here.')) {
+          return;
+        }
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = 'Deleting...';
+        try {
+          const res = await apiDelete(AUTH_ENDPOINTS.PROFILE, { body: JSON.stringify({ password }) });
+          if ((res as any).success) {
+            showToast('Account deleted. Signing you out...', 'success');
+            clearLocalAuth();
+            setTimeout(() => { window.location.hash = '#/login'; }, 1500);
+          } else {
+            showToast((res as any).error?.message || 'Failed to delete account.', 'error');
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = 'Delete Account';
+          }
+        } catch {
+          showToast('Failed to delete account. Please try again.', 'error');
+          deleteBtn.disabled = false;
+          deleteBtn.textContent = 'Delete Account';
+        }
+      });
+      dangerCard.appendChild(deleteBtn);
+      page.appendChild(dangerCard);
 
     } catch {
       hideLoadingSpinner(spinner);

@@ -7,6 +7,7 @@ import { renderLogin } from './pages/public/login';
 import { renderRegister } from './pages/public/register';
 import { renderVerifyEmail } from './pages/public/verify-email';
 import { renderForgotPassword } from './pages/public/forgot-password';
+import { renderMagicLogin } from './pages/public/magic-login';
 import { renderDashboardLayout } from './pages/dashboard/layout';
 import { renderDashboardHome } from './pages/dashboard/home';
 import { renderSettingsPage } from './pages/dashboard/settings';
@@ -172,6 +173,7 @@ class Router {
     this.route('/register', () => renderTo(appRoot, renderRegister()));
     this.route('/verify-email', () => renderTo(appRoot, renderVerifyEmail()));
     this.route('/forgot-password', () => renderTo(appRoot, renderForgotPassword()));
+    this.route('/magic-login', () => renderTo(appRoot, renderMagicLogin()));
 
     this.route('/chat/:businessId', async () => {
       const params = this.getParams();

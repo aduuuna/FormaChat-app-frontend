@@ -13,6 +13,11 @@ export const AUTH_ENDPOINTS = {
   OTP_GENERATE: `${API_BASE_URLS.AUTH}/otp/generate`,
   OTP_VERIFY: `${API_BASE_URLS.AUTH}/otp/verify`,
   OTP_RESEND: `${API_BASE_URLS.AUTH}/otp/resend`,
+  LOGIN_2FA_VERIFY: `${API_BASE_URLS.AUTH}/login/2fa/verify`,
+  TWO_FA_ENABLE: `${API_BASE_URLS.AUTH}/2fa/enable`,
+  TWO_FA_DISABLE: `${API_BASE_URLS.AUTH}/2fa/disable`,
+  MAGIC_LINK_REQUEST: `${API_BASE_URLS.AUTH}/magic-link/request`,
+  MAGIC_LINK_VERIFY: `${API_BASE_URLS.AUTH}/magic-link/verify`,
   PASSWORD_CHANGE: `${API_BASE_URLS.AUTH}/password/change`,
   PASSWORD_RESET: `${API_BASE_URLS.AUTH}/password/reset`,
   PASSWORD_RESET_CONFIRM: `${API_BASE_URLS.AUTH}/password/reset/confirm`,
@@ -21,6 +26,7 @@ export const AUTH_ENDPOINTS = {
   TOKEN_REVOKE_OTHERS: `${API_BASE_URLS.AUTH}/token/revoke-others`,
   PROFILE: `${API_BASE_URLS.AUTH}/profile`,
   SESSIONS: `${API_BASE_URLS.AUTH}/sessions`,
+  SESSION_REVOKE: (sessionId: string) => `${API_BASE_URLS.AUTH}/sessions/${sessionId}`,
   FEEDBACK: `${API_BASE_URLS.AUTH}/feedback`,
 } as const;
 
