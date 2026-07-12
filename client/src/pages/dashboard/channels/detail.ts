@@ -467,6 +467,25 @@ export async function renderChannelsDetail(businessId: string): Promise<HTMLElem
     });
     grid.appendChild(testCard);
 
+    const productsCard = document.createElement('section');
+    productsCard.className = 'glass-card';
+    productsCard.innerHTML = `
+      <h2 class="card-title">Products</h2>
+      <p class="card-desc">Add products with photos, prices, and live stock counts. Your chatbot answers questions about them directly.</p>
+    `;
+    const productsLink = document.createElement('a');
+    productsLink.href = `#/dashboard/businesses/${business._id}/products`;
+    productsLink.className = 'test-bot-btn';
+    productsLink.style.textDecoration = 'none';
+    productsLink.innerHTML = `
+      <span>Manage Products</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M5 12h14M12 5l7 7-7 7"></path>
+      </svg>
+    `;
+    productsCard.appendChild(productsLink);
+    grid.appendChild(productsCard);
+
     const qrCard = document.createElement('section');
     qrCard.className = 'glass-card';
     qrCard.innerHTML = `

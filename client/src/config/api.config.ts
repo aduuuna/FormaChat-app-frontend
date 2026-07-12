@@ -43,6 +43,10 @@ export const BUSINESS_ENDPOINTS = {
   WEBHOOK_DETAIL: (businessId: string, webhookId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/webhooks/${webhookId}`,
   WEBHOOK_DELIVERIES: (businessId: string, webhookId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/webhooks/${webhookId}/deliveries`,
   WEBHOOK_DELIVERY_RETRY: (businessId: string, deliveryId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/webhooks/deliveries/${deliveryId}/retry`,
+  PRODUCTS: (businessId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/products`,
+  PRODUCT_DETAIL: (businessId: string, productId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/products/${productId}`,
+  PRODUCT_STOCK: (businessId: string, productId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/products/${productId}/stock`,
+  PRODUCT_IMAGE_UPLOAD: (businessId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/products/upload-image`,
 } as const;
 
 export const CHAT_ENDPOINTS = {

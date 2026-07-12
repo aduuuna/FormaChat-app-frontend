@@ -14,6 +14,7 @@ import { renderSettingsPage } from './pages/dashboard/settings';
 import { renderBusinessList } from './pages/dashboard/businesses/list';
 import { renderBusinessCreate } from './pages/dashboard/businesses/create';
 import { renderBusinessEdit } from './pages/dashboard/businesses/edit';
+import { renderProductsPage } from './pages/dashboard/businesses/products';
 import { renderChannelsIndex } from './pages/dashboard/channels/index';
 import { renderChannelsDetail } from './pages/dashboard/channels/detail';
 import { renderAnalyticsIndex } from './pages/dashboard/analytics/index';
@@ -217,6 +218,13 @@ class Router {
     this.protectedRoute('/dashboard/businesses/:id/edit', async () => {
       const params = this.getParams();
       const content = await renderBusinessEdit(params.id);
+      const layout = await renderDashboardLayout(content);
+      renderTo(appRoot, layout);
+    });
+
+    this.protectedRoute('/dashboard/businesses/:id/products', async () => {
+      const params = this.getParams();
+      const content = await renderProductsPage(params.id);
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
     });

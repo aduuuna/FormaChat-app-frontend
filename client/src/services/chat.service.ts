@@ -36,6 +36,14 @@ export const createChatSession = async (businessId: string): Promise<{
 };
 
 
+export interface ChatProduct {
+  id: string;
+  name: string;
+  price: number;
+  stockQuantity: number;
+  imageUrl?: string;
+}
+
 export const sendChatMessage = async (
   sessionId: string,
   message: string
@@ -46,6 +54,7 @@ export const sendChatMessage = async (
     timestamp: string;
   };
   contactCaptured: boolean;
+  products?: ChatProduct[];
 }> => {
   console.log('[ChatService] Sending message to session:', sessionId);
 

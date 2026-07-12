@@ -1,9 +1,10 @@
 import { getBusinessById } from '../../services/business.service';
-import { 
-  createChatSession, 
+import {
+  createChatSession,
   sendChatMessage,
   endChatSession
 } from '../../services/chat.service';
+import type { ChatProduct } from '../../services/chat.service';
 import { showModal } from '../../components/modal';
 
 /** Darken (negative percent) or lighten (positive) a #rrggbb hex color, for hover-state shades. */
@@ -129,6 +130,16 @@ function injectWidgetStyles() {
     .message-bot { align-self: flex-start; background: var(--white); color: var(--text-main); border-radius: 18px 18px 18px 2px; border: 1px solid #e5e7eb; margin-right: auto; }
     .message-user { align-self: flex-end; background: var(--primary); color: var(--white); border-radius: 18px 18px 2px 18px; margin-left: auto; box-shadow: 0 4px 10px rgba(99, 107, 47, 0.2); }
     .message-system { align-self: center; background: rgba(0,0,0,0.05); color: var(--text-muted); border-radius: 12px; font-size: 13px; padding: 6px 12px; box-shadow: none; margin: 10px auto; text-align: center; }
+    .product-cards-wrapper { display: flex; flex-direction: column; gap: 8px; max-width: 80%; align-self: flex-start; margin: -4px 0 12px; }
+    .product-chat-card { display: flex; gap: 10px; background: var(--white); border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05); animation: popIn 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+    .product-chat-card-image { width: 64px; height: 64px; object-fit: cover; flex-shrink: 0; }
+    .product-chat-card-body { padding: 10px 12px 10px 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
+    .product-chat-card-name { font-weight: 700; font-size: 14px; color: var(--text-main); }
+    .product-chat-card-price-row { display: flex; align-items: center; gap: 8px; }
+    .product-chat-card-price { font-weight: 700; color: var(--primary); font-size: 14px; }
+    .product-chat-card-stock { font-size: 12px; font-weight: 600; }
+    .product-chat-card-stock.in-stock { color: #16a34a; }
+    .product-chat-card-stock.out-of-stock { color: #dc2626; }
     .input-wrapper { flex: 1; position: relative; display: flex; align-items: center; }
     .chat-input { width: 100%; padding: 14px 20px; padding-right: 50px; border: 1px solid #e0e0e0; border-radius: 30px; font-size: 15px; outline: none; background: #f9f9f9; transition: all 0.2s; font-family: inherit; color: black }
     .chat-input:focus { background: var(--white); border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 107, 47, 0.1); }
@@ -406,9 +417,13 @@ function createInputArea(sessionId: string, messagesContainer: HTMLElement): HTM
 
     try {
       const response = await sendChatMessage(sessionId, text);
-      
+
       removeTypingIndicator(typingId);
       addMessageToUI(messagesContainer, response.message.content, 'bot');
+
+      if (response.products && response.products.length > 0) {
+        addProductCardsToUI(messagesContainer, response.products);
+      }
 
       if (response.contactCaptured) {
         addMessageToUI(messagesContainer, '✓ Contact info saved', 'system');
@@ -438,6 +453,52 @@ function addMessageToUI(container: HTMLElement, text: string, type: 'user' | 'bo
   bubble.className = `message-bubble message-${type}`;
   bubble.textContent = text;
   container.appendChild(bubble);
+  scrollToBottom(container);
+}
+
+function addProductCardsToUI(container: HTMLElement, products: ChatProduct[]): void {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'product-cards-wrapper';
+
+  products.forEach(product => {
+    const card = document.createElement('div');
+    card.className = 'product-chat-card';
+
+    if (product.imageUrl) {
+      const img = document.createElement('img');
+      img.className = 'product-chat-card-image';
+      img.src = product.imageUrl;
+      img.alt = product.name;
+      card.appendChild(img);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'product-chat-card-body';
+
+    const name = document.createElement('div');
+    name.className = 'product-chat-card-name';
+    name.textContent = product.name;
+    body.appendChild(name);
+
+    const priceRow = document.createElement('div');
+    priceRow.className = 'product-chat-card-price-row';
+
+    const price = document.createElement('span');
+    price.className = 'product-chat-card-price';
+    price.textContent = `$${product.price.toFixed(2)}`;
+    priceRow.appendChild(price);
+
+    const stock = document.createElement('span');
+    stock.className = `product-chat-card-stock ${product.stockQuantity > 0 ? 'in-stock' : 'out-of-stock'}`;
+    stock.textContent = product.stockQuantity > 0 ? `${product.stockQuantity} in stock` : 'Out of stock';
+    priceRow.appendChild(stock);
+
+    body.appendChild(priceRow);
+    card.appendChild(body);
+    wrapper.appendChild(card);
+  });
+
+  container.appendChild(wrapper);
   scrollToBottom(container);
 }
 
