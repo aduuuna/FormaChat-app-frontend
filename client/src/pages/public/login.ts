@@ -320,12 +320,15 @@ export function renderLogin(): HTMLElement {
 
     let pendingUserId: string | null = null;
 
-    const completeSuccessfulLogin = (data: { user: any; tokens: any }) => {
+    const completeSuccessfulLogin = (data: { user: any; tokens: any; reactivated?: boolean }) => {
         saveTokens(data.tokens);
         saveUser(data.user);
+        if (data.reactivated) {
+            showToast('Welcome back — your account has been reactivated.', 'success');
+        }
         setTimeout(() => {
             window.location.hash = '#/dashboard';
-        }, 500);
+        }, data.reactivated ? 1200 : 500);
     };
 
     otpSubmitBtn.addEventListener('click', async () => {

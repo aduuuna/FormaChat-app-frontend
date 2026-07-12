@@ -163,3 +163,9 @@ export const verifyMagicLink = async (
     { skipAuth: true }
   );
 };
+
+
+export const revokeOtherSessions = async (): Promise<ApiResponse<any>> => {
+  const refreshToken = getRefreshToken();
+  return await apiPost(AUTH_ENDPOINTS.TOKEN_REVOKE_OTHERS, { refreshToken });
+};

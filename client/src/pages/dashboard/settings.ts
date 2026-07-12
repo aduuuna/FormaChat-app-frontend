@@ -1,10 +1,12 @@
 import { createBreadcrumb } from '../../components/breadcrumb';
 import { createLoadingSpinner, hideLoadingSpinner } from '../../components/loading-spinner';
-import { getCurrentUser, enableTwoFactor, disableTwoFactor } from '../../services/auth.service';
+import { getCurrentUser, enableTwoFactor, disableTwoFactor, revokeOtherSessions } from '../../services/auth.service';
 import { getUser, saveUser, logout as clearLocalAuth } from '../../utils/auth.utils';
 import { apiPut, apiGet, apiDelete } from '../../utils/api.utils';
 import { AUTH_ENDPOINTS } from '../../config/api.config';
 import { showToast } from '../../utils/toast';
+
+type SettingsTab = 'account' | 'sessions' | 'security';
 
 interface SessionInfo {
   id: string;
@@ -169,6 +171,26 @@ function injectSettingsStyles() {
     }
     .status-badge-on { background: #e8f5e9; color: #2e7d32; }
     .status-badge-off { background: #f0f0f0; color: #666; }
+
+    .settings-tab-bar {
+      display: flex; gap: 4px; border-bottom: 2px solid #e5e7eb; margin-bottom: 24px;
+      overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .settings-tab-bar::-webkit-scrollbar { display: none; }
+    .settings-tab-btn {
+      padding: 10px 18px; font-weight: 700; font-size: 0.9rem; color: #666;
+      background: none; border: none; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; white-space: nowrap; cursor: pointer; transition: color 0.15s;
+      font-family: inherit;
+    }
+    .settings-tab-btn:hover { color: #4a5122; }
+    .settings-tab-btn.active { color: #636b2f; border-bottom-color: #636b2f; }
+    .settings-tab-panel { display: none; }
+    .settings-tab-panel.active { display: block; }
+
+    @media (max-width: 600px) {
+      .settings-tab-btn { padding: 10px 14px; font-size: 0.85rem; }
+    }
   `;
   document.head.appendChild(style);
 }
@@ -194,6 +216,43 @@ export function renderSettingsPage(): HTMLElement {
 
   wrapper.appendChild(page);
 
+  // ---- Tab bar + panels (built once content loads) ----
+  const TABS: Array<{ id: SettingsTab; label: string }> = [
+    { id: 'account', label: 'Account' },
+    { id: 'sessions', label: 'Sessions' },
+    { id: 'security', label: 'Security' },
+  ];
+
+  const tabBar = document.createElement('div');
+  tabBar.className = 'settings-tab-bar';
+
+  const panels: Record<SettingsTab, HTMLElement> = {
+    account: document.createElement('div'),
+    sessions: document.createElement('div'),
+    security: document.createElement('div'),
+  };
+
+  const tabButtons: Record<SettingsTab, HTMLButtonElement> = {} as any;
+
+  const setActiveTab = (tab: SettingsTab) => {
+    (Object.keys(panels) as SettingsTab[]).forEach((id) => {
+      panels[id].classList.toggle('active', id === tab);
+      tabButtons[id].classList.toggle('active', id === tab);
+    });
+  };
+
+  TABS.forEach(({ id, label }) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'settings-tab-btn';
+    btn.textContent = label;
+    btn.addEventListener('click', () => setActiveTab(id));
+    tabBar.appendChild(btn);
+    tabButtons[id] = btn;
+
+    panels[id].className = 'settings-tab-panel';
+  });
+
   // Load user data then render
   (async () => {
     try {
@@ -209,6 +268,10 @@ export function renderSettingsPage(): HTMLElement {
       }
 
       const user = response.data;
+
+      page.appendChild(tabBar);
+      (Object.keys(panels) as SettingsTab[]).forEach((id) => page.appendChild(panels[id]));
+      setActiveTab('account');
 
       // ---- Profile card ----
       const profileCard = document.createElement('div');
@@ -293,7 +356,7 @@ export function renderSettingsPage(): HTMLElement {
         }
       });
       profileCard.appendChild(saveProfileBtn);
-      page.appendChild(profileCard);
+      panels.account.appendChild(profileCard);
 
       // ---- Change password card ----
       const pwCard = document.createElement('div');
@@ -367,7 +430,7 @@ export function renderSettingsPage(): HTMLElement {
         }
       });
       pwCard.appendChild(changePwBtn);
-      page.appendChild(pwCard);
+      panels.security.appendChild(pwCard);
 
       // ---- Two-factor authentication card ----
       const tfaCard = document.createElement('div');
@@ -440,20 +503,38 @@ export function renderSettingsPage(): HTMLElement {
         }
       });
       tfaCard.appendChild(tfaToggleBtn);
-      page.appendChild(tfaCard);
+      panels.security.appendChild(tfaCard);
 
       // ---- Active sessions card ----
       const sessionsCard = document.createElement('div');
       sessionsCard.className = 'settings-card';
 
+      const sessionsTitleRow = document.createElement('div');
+      sessionsTitleRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid #f0f0f0;';
+
       const sessionsTitle = document.createElement('h2');
       sessionsTitle.className = 'settings-card-title';
+      sessionsTitle.style.cssText = 'margin:0; padding:0; border:none;';
       sessionsTitle.textContent = 'Active Sessions';
-      sessionsCard.appendChild(sessionsTitle);
+      sessionsTitleRow.appendChild(sessionsTitle);
+
+      const revokeOthersBtn = document.createElement('button');
+      revokeOthersBtn.className = 'settings-btn-danger';
+      revokeOthersBtn.style.cssText = 'padding:8px 16px; font-size:0.82rem;';
+      revokeOthersBtn.textContent = 'Sign out of all other devices';
+      sessionsTitleRow.appendChild(revokeOthersBtn);
+
+      sessionsCard.appendChild(sessionsTitleRow);
+
+      const sessionsHint = document.createElement('p');
+      sessionsHint.className = 'settings-hint';
+      sessionsHint.style.marginBottom = '12px';
+      sessionsHint.textContent = 'Every device currently signed in to your account. Sign out individual devices below, or sign out everywhere except here.';
+      sessionsCard.appendChild(sessionsHint);
 
       const sessionsList = document.createElement('div');
       sessionsCard.appendChild(sessionsList);
-      page.appendChild(sessionsCard);
+      panels.sessions.appendChild(sessionsCard);
 
       const renderSessions = async () => {
         sessionsList.innerHTML = '';
@@ -524,21 +605,43 @@ export function renderSettingsPage(): HTMLElement {
         }
       };
 
+      revokeOthersBtn.addEventListener('click', async () => {
+        if (!window.confirm('Sign out of every other device? This device stays signed in.')) {
+          return;
+        }
+        revokeOthersBtn.disabled = true;
+        revokeOthersBtn.textContent = 'Signing out...';
+        try {
+          const res = await revokeOtherSessions();
+          if ((res as any).success) {
+            showToast('Signed out of all other devices.', 'success');
+            await renderSessions();
+          } else {
+            showToast((res as any).error?.message || 'Failed to sign out other devices.', 'error');
+          }
+        } catch (error: any) {
+          showToast(error?.message || 'Failed to sign out other devices. Please try again.', 'error');
+        } finally {
+          revokeOthersBtn.disabled = false;
+          revokeOthersBtn.textContent = 'Sign out of all other devices';
+        }
+      });
+
       await renderSessions();
 
-      // ---- Danger zone: delete account ----
+      // ---- Danger zone: deactivate account ----
       const dangerCard = document.createElement('div');
       dangerCard.className = 'settings-card settings-card-danger';
 
       const dangerTitle = document.createElement('h2');
       dangerTitle.className = 'settings-card-title';
-      dangerTitle.textContent = 'Delete Account';
+      dangerTitle.textContent = 'Deactivate Account';
       dangerCard.appendChild(dangerTitle);
 
       const dangerHint = document.createElement('p');
       dangerHint.className = 'settings-hint';
       dangerHint.style.marginBottom = '16px';
-      dangerHint.textContent = 'This deactivates your account and signs you out everywhere. Enter your password to confirm.';
+      dangerHint.textContent = 'This signs you out everywhere and deactivates your account immediately. Log back in any time within 30 days to reactivate automatically. After 30 days your account and data are permanently deleted, and this email address can no longer be used to create a new account.';
       dangerCard.appendChild(dangerHint);
 
       const deleteField = document.createElement('div');
@@ -556,37 +659,37 @@ export function renderSettingsPage(): HTMLElement {
 
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'settings-btn-danger';
-      deleteBtn.textContent = 'Delete Account';
+      deleteBtn.textContent = 'Deactivate Account';
       deleteBtn.addEventListener('click', async () => {
         const password = deleteInput.value;
         if (!password) {
           showToast('Please enter your password to confirm.', 'error');
           return;
         }
-        if (!window.confirm('Are you sure you want to delete your account? This cannot be undone from here.')) {
+        if (!window.confirm('Deactivate your account? You can reactivate by logging back in within 30 days. After that, your account is permanently deleted.')) {
           return;
         }
         deleteBtn.disabled = true;
-        deleteBtn.textContent = 'Deleting...';
+        deleteBtn.textContent = 'Deactivating...';
         try {
           const res = await apiDelete(AUTH_ENDPOINTS.PROFILE, { body: JSON.stringify({ password }) });
           if ((res as any).success) {
-            showToast('Account deleted. Signing you out...', 'success');
+            showToast('Account deactivated. Signing you out...', 'success');
             clearLocalAuth();
             setTimeout(() => { window.location.hash = '#/login'; }, 1500);
           } else {
-            showToast((res as any).error?.message || 'Failed to delete account.', 'error');
+            showToast((res as any).error?.message || 'Failed to deactivate account.', 'error');
             deleteBtn.disabled = false;
-            deleteBtn.textContent = 'Delete Account';
+            deleteBtn.textContent = 'Deactivate Account';
           }
         } catch (error: any) {
-          showToast(error?.message || 'Failed to delete account. Please try again.', 'error');
+          showToast(error?.message || 'Failed to deactivate account. Please try again.', 'error');
           deleteBtn.disabled = false;
-          deleteBtn.textContent = 'Delete Account';
+          deleteBtn.textContent = 'Deactivate Account';
         }
       });
       dangerCard.appendChild(deleteBtn);
-      page.appendChild(dangerCard);
+      panels.account.appendChild(dangerCard);
 
     } catch (error: any) {
       hideLoadingSpinner(spinner);

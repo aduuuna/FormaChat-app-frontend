@@ -27,6 +27,7 @@ export interface LoginRequest {
 export interface LoginSuccessResponse {
   user: User;
   tokens: AuthTokens;
+  reactivated?: boolean;
 }
 
 export interface LoginRequiresTwoFactorResponse {
