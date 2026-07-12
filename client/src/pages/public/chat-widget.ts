@@ -146,15 +146,16 @@ function injectWidgetStyles() {
     .chat-ui.standalone-ui {
       max-width: 480px;
       height: 700px;
-      border: 1px solid var(--primary);
+      border: 2px solid var(--primary);
       border-radius: 20px;
       box-shadow: 0 20px 50px rgba(0,0,0,0.15);
     }
 
     .chat-ui.embed-ui {
       height: 100%;
-      border: 1px solid var(--primary);
+      border: 2px solid var(--primary);
       border-radius: 20px;
+      box-sizing: border-box;
     }
 
     /* Below ~480px, widget.js switches the iframe itself to a full-screen
@@ -177,13 +178,31 @@ function injectWidgetStyles() {
       flex-shrink: 0; /* Prevent header from squishing */
     }
 
-    .header-branding {
-      text-align: center;
-      padding: 5px 0;
-      background: rgba(0,0,0,0.1);
+    /* Small hanging tag overlaid on the header's top-right corner, not a
+       full-width band - sits on .chat-widget-container (position:relative),
+       above/on top of .chat-header in the same corner a close control would
+       occupy. A dark translucent pill keeps it legible against any
+       configured header color instead of picking one fixed text color. */
+    .widget-branding-hanging {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      z-index: 11;
     }
-    .header-branding a { font-size: 10px; color: var(--white); text-decoration: none; font-weight: 600; opacity: 0.75; letter-spacing: 0.2px; transition: opacity 0.2s; }
-    .header-branding a:hover { opacity: 1; }
+    .widget-branding-hanging a {
+      display: inline-block;
+      background: rgba(0,0,0,0.25);
+      color: rgba(255,255,255,0.9);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      text-decoration: none;
+      padding: 3px 8px;
+      border-radius: 10px;
+      backdrop-filter: blur(2px);
+      transition: background 0.2s, color 0.2s;
+    }
+    .widget-branding-hanging a:hover { background: rgba(0,0,0,0.4); color: #fff; }
 
     .header-main-row {
       padding: 15px 20px;
@@ -333,6 +352,17 @@ export async function renderChatWidget(businessId: string, embedMode: boolean = 
     container.removeChild(loadingDiv);
     const chatUI = createChatUI(business, session, isEmbedMode);
     container.appendChild(chatUI);
+
+    // Hanging tag, not part of chat-ui itself: positioned via
+    // .chat-widget-container's own position:relative, so it survives
+    // independent of the card's overflow:hidden/rounded corners. Still
+    // lives inside this iframe's document, so it automatically disappears
+    // along with everything else when the widget is closed (widget.js
+    // collapses the iframe to 0x0 rather than removing this content).
+    const branding = document.createElement('div');
+    branding.className = 'widget-branding-hanging';
+    branding.innerHTML = `<a href="https://www.formachat.com" target="_blank" rel="noopener noreferrer">Powered by FormaChat</a>`;
+    container.appendChild(branding);
   } catch (error: any) {
     console.error('[Chat Widget] Init failed:', error);
     container.removeChild(loadingDiv);
@@ -396,11 +426,6 @@ function createChatUI(
 function createChatHeader(business: any, sessionId: string): HTMLElement {
   const header = document.createElement('div');
   header.className = 'chat-header';
-
-  const branding = document.createElement('div');
-  branding.className = 'header-branding';
-  branding.innerHTML = `<a href="https://www.formachat.com" target="_blank" rel="noopener noreferrer">⚡ Powered by FormaChat</a>`;
-  header.appendChild(branding);
 
   const mainRow = document.createElement('div');
   mainRow.className = 'header-main-row';
