@@ -138,32 +138,15 @@
           this.unreadCount += 1;
           this.updateBadge();
         }
-      } else if (data.type === 'close') {
-        this.close();
       }
     },
 
     handleResize: function() {
       // Re-apply whatever open/closed state is current so the mobile
-      // fullscreen breakpoint kicks in (or reverts) on rotate/resize,
-      // not just on first render.
+      // fullscreen breakpoint kicks in (or reverts) on rotate/resize, not
+      // just on first render. The button itself needs no adjustment here -
+      // it stays visible and on top at every viewport size (see open()).
       this.iframe.style.cssText = this.getIframeStyles(this.isOpen);
-
-      // The launcher button hides itself during mobile full-screen mode
-      // (see open()) - if the viewport crosses the breakpoint while still
-      // open (rotating a tablet, resizing a desktop window), bring it back
-      // or hide it to match, instead of leaving it stuck in a stale state.
-      if (this.isOpen) {
-        if (this.isMobile()) {
-          this.button.style.transform = 'scale(0)';
-          this.button.style.opacity = '0';
-          this.button.style.pointerEvents = 'none';
-        } else {
-          this.button.style.transform = 'scale(1) rotate(90deg)';
-          this.button.style.opacity = '1';
-          this.button.style.pointerEvents = 'auto';
-        }
-      }
     },
 
     scheduleGreetingBubble: function() {
@@ -250,9 +233,12 @@
       this.iframe.style.cssText = this.getIframeStyles(true);
       this.button.innerHTML = this.icons.close;
       this.button.appendChild(this.badge);
-      this.button.style.transform = this.isMobile() ? 'scale(0)' : 'scale(1) rotate(90deg)';
-      this.button.style.opacity = this.isMobile() ? '0' : '1';
-      if (this.isMobile()) this.button.style.pointerEvents = 'none';
+      // Stays visible and on top even in mobile full-screen mode (it's
+      // appended after the iframe, so it paints above it) - it's the one
+      // and only way to close the widget, on every screen size.
+      this.button.style.transform = 'scale(1) rotate(90deg)';
+      this.button.style.opacity = '1';
+      this.button.style.pointerEvents = 'auto';
     },
 
     close: function() {
@@ -357,9 +343,8 @@
     getIframeStyles: function(isOpen) {
       if (this.isMobile() && isOpen) {
         // Full-screen takeover on small viewports - a 380px floating card
-        // is unusable on a phone. The launcher button hides itself while
-        // open (see open()); the in-widget close (X) button - see
-        // chat-widget.ts's header - is how the user gets back out.
+        // is unusable on a phone. The launcher button stays visible on top
+        // (see open()) as the way to close it.
         return [
           'position: fixed',
           'top: 0',
@@ -380,10 +365,23 @@
         ].join(';');
       }
 
+      // Anchor to whichever side the container itself is anchored to. The
+      // container shrinks to fit its content (just the 60px button when
+      // closed), so a hardcoded `right: 0` here was always measured against
+      // that narrow box - fine when the container sits at the right edge,
+      // but when position is 'bottom-left' the container's "right edge" is
+      // only ~60px from the left of the screen, so a 400px-wide iframe
+      // anchored there via `right: 0` expanded leftward into negative
+      // coordinates and went almost entirely off-screen. Anchoring to
+      // `left: 0` instead when the container itself is left-anchored keeps
+      // the popup expanding rightward, into the visible page, regardless of
+      // which corner the launcher lives in.
+      var anchorLeft = this.config.position.indexOf('left') !== -1;
+
       return [
         'position: absolute',
         'bottom: 80px',
-        'right: 0',
+        anchorLeft ? 'left: 0' : 'right: 0',
         'width: ' + (isOpen ? '400px' : '0'),
         'height: ' + (isOpen ? '640px' : '0'),
         'max-height: calc(100vh - 120px)',
@@ -393,7 +391,13 @@
         'visibility: ' + (isOpen ? 'visible' : 'hidden'),
         'transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
         'transform: ' + (isOpen ? 'translateY(0)' : 'translateY(20px)'),
-        'background: white',
+        // Transparent, not white: the iframe box is a plain rectangle but
+        // the chat card inside it (chat-ui) has rounded corners - an opaque
+        // white iframe background showed through at those corners as a
+        // white square poking out from behind the rounded card. The chat
+        // card itself still renders its own white background from inside
+        // (chat-widget.ts's .chat-ui), this only affects the frame around it.
+        'background: transparent',
         'border-radius: 20px'
       ].join(';');
     }

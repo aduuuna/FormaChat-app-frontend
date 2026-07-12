@@ -23,8 +23,11 @@ function shadeColor(hex: string, percent: number): string {
  * every call site can fire this unconditionally without checking embed mode
  * itself. widget.js listens for `source: 'formachat-widget'` messages -
  * see public/widget.js's `window.addEventListener('message', ...)`.
+ * Closing the widget is deliberately not part of this bridge - the external
+ * launcher button already toggles open/closed, so an in-widget close button
+ * would just be a second, redundant way to do the same thing.
  */
-function notifyParent(type: 'ready' | 'message' | 'close', payload: Record<string, any> = {}): void {
+function notifyParent(type: 'ready' | 'message', payload: Record<string, any> = {}): void {
   if (window.parent === window) return;
   window.parent.postMessage({ source: 'formachat-widget', type, ...payload }, '*');
 }
@@ -94,14 +97,20 @@ function injectWidgetStyles() {
       --shadow-soft: 0 4px 20px rgba(0,0,0,0.08);
     }
 
-    /* FIX 2: Ensure html/body are strictly 100% height with no overflow */
-    html, body { 
-      margin: 0; 
+    /* FIX 2: Ensure html/body are strictly 100% height with no overflow.
+       Transparent by default - the iframe's own element background in
+       widget.js is also transparent now, so nothing white shows through at
+       the chat card's rounded corners on the host page. Standalone/testing
+       mode (opened directly, not embedded) restores an opaque page
+       background below since there's no host page behind it to show. */
+    html, body {
+      margin: 0;
       padding: 0;
-      height: 100%; 
+      height: 100%;
       width: 100%;
-      overflow: hidden; 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: transparent;
     }
 
     /* Main Container */
@@ -113,7 +122,7 @@ function injectWidgetStyles() {
       /* Default centering for Standalone Mode only */
       justify-content: center;
       align-items: center;
-      background: #f5f5f5; 
+      background: #f5f5f5;
       position: relative;
     }
 
@@ -137,14 +146,14 @@ function injectWidgetStyles() {
     .chat-ui.standalone-ui {
       max-width: 480px;
       height: 700px;
-      border: 1px solid #4a5122;
+      border: 1px solid var(--primary);
       border-radius: 20px;
       box-shadow: 0 20px 50px rgba(0,0,0,0.15);
     }
 
     .chat-ui.embed-ui {
       height: 100%;
-      border: 1px solid #4a5122;
+      border: 1px solid var(--primary);
       border-radius: 20px;
     }
 
@@ -159,15 +168,28 @@ function injectWidgetStyles() {
     /* ... REST OF YOUR CSS (Header, Messages, etc.) STAYS THE SAME ... */
     
     .chat-header {
-      padding: 15px 20px;
+      display: flex;
+      flex-direction: column;
       background: var(--primary);
       color: var(--white);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       z-index: 10;
       flex-shrink: 0; /* Prevent header from squishing */
+    }
+
+    .header-branding {
+      text-align: center;
+      padding: 5px 0;
+      background: rgba(0,0,0,0.1);
+    }
+    .header-branding a { font-size: 10px; color: var(--white); text-decoration: none; font-weight: 600; opacity: 0.75; letter-spacing: 0.2px; transition: opacity 0.2s; }
+    .header-branding a:hover { opacity: 1; }
+
+    .header-main-row {
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     .chat-messages {
@@ -195,8 +217,6 @@ function injectWidgetStyles() {
     .bot-avatar { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid rgba(255,255,255,0.3); flex-shrink: 0; }
     .bot-details { min-width: 0; }
     .bot-details h3 { margin: 0; font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .bot-status { font-size: 12px; opacity: 0.9; display: flex; align-items: center; gap: 4px; }
-    .status-dot { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; display: inline-block; }
     .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .btn-end-chat { background: #dc2626; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
     .btn-end-chat:hover {
@@ -204,8 +224,6 @@ function injectWidgetStyles() {
       background: #b91c1c;
       transform: translateY(-1px); }
     .btn-end-chat:disabled { opacity: 0.5; cursor: default; }
-    .btn-widget-close { width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
-    .btn-widget-close:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
     .chat-messages::-webkit-scrollbar { width: 6px; }
     .chat-messages::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
     .message-row { display: flex; flex-direction: column; max-width: 80%; margin-bottom: 12px; }
@@ -249,13 +267,9 @@ function injectWidgetStyles() {
     .status-title { font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; }
     .status-msg { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
 
-    .widget-branding { text-align: center; padding: 6px 0 10px; flex-shrink: 0; background: var(--white); }
-    .widget-branding a { font-size: 11px; color: var(--text-muted); text-decoration: none; font-weight: 600; opacity: 0.7; transition: opacity 0.2s; }
-    .widget-branding a:hover { opacity: 1; }
-
     /* Mobile: widen bubbles a little since screen real estate is already
-       tight, and give the header's End Chat button a bit less room so the
-       close (X) button never gets crowded off - both live in header-actions. */
+       tight, and shrink the End Chat button slightly so it doesn't crowd
+       the business name in a narrow header. */
     @media (max-width: 480px) {
       .message-row { max-width: 88%; }
       .btn-end-chat { padding: 6px 10px; font-size: 11px; }
@@ -361,7 +375,7 @@ function createChatUI(
   const chatContainer = document.createElement('div');
   chatContainer.className = isEmbedMode ? 'chat-ui embed-ui' : 'chat-ui standalone-ui';
 
-  const header = createChatHeader(business, session.sessionId, isEmbedMode);
+  const header = createChatHeader(business, session.sessionId);
   chatContainer.appendChild(header);
 
   const messagesContainer = document.createElement('div');
@@ -376,17 +390,20 @@ function createChatUI(
   const inputArea = createInputArea(session.sessionId, messagesContainer);
   chatContainer.appendChild(inputArea);
 
-  const branding = document.createElement('div');
-  branding.className = 'widget-branding';
-  branding.innerHTML = `<a href="https://www.formachat.com" target="_blank" rel="noopener noreferrer">⚡ Powered by FormaChat</a>`;
-  chatContainer.appendChild(branding);
-
   return chatContainer;
 }
 
-function createChatHeader(business: any, sessionId: string, isEmbedMode: boolean): HTMLElement {
+function createChatHeader(business: any, sessionId: string): HTMLElement {
   const header = document.createElement('div');
   header.className = 'chat-header';
+
+  const branding = document.createElement('div');
+  branding.className = 'header-branding';
+  branding.innerHTML = `<a href="https://www.formachat.com" target="_blank" rel="noopener noreferrer">⚡ Powered by FormaChat</a>`;
+  header.appendChild(branding);
+
+  const mainRow = document.createElement('div');
+  mainRow.className = 'header-main-row';
 
   const infoGroup = document.createElement('div');
   infoGroup.className = 'header-info';
@@ -403,14 +420,10 @@ function createChatHeader(business: any, sessionId: string, isEmbedMode: boolean
 
   const details = document.createElement('div');
   details.className = 'bot-details';
-  details.innerHTML = `
-    <h3>${business.basicInfo.businessName}</h3>
-    <div class="bot-status"><span class="status-dot"></span> Online</div>
-  `;
-
+  details.innerHTML = `<h3>${business.basicInfo.businessName}</h3>`;
 
   infoGroup.appendChild(details);
-  header.appendChild(infoGroup);
+  mainRow.appendChild(infoGroup);
 
   const endButton = document.createElement('button');
   endButton.className = 'btn-end-chat';
@@ -487,16 +500,8 @@ function createChatHeader(business: any, sessionId: string, isEmbedMode: boolean
   actions.className = 'header-actions';
   actions.appendChild(endButton);
 
-  if (isEmbedMode) {
-    const closeButton = document.createElement('button');
-    closeButton.className = 'btn-widget-close';
-    closeButton.setAttribute('aria-label', 'Close chat');
-    closeButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-    closeButton.addEventListener('click', () => notifyParent('close'));
-    actions.appendChild(closeButton);
-  }
-
-  header.appendChild(actions);
+  mainRow.appendChild(actions);
+  header.appendChild(mainRow);
 
   return header;
 }
