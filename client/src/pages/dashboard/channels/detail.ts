@@ -2,7 +2,6 @@ import { createBreadcrumb } from '../../../components/breadcrumb';
 import { createLoadingSpinner, hideLoadingSpinner } from '../../../components/loading-spinner';
 import {
   getBusinessById,
-  getBusinessHealthScore,
   updateBusiness,
   getWebhookEvents,
   listWebhooks,
@@ -14,6 +13,7 @@ import {
 } from '../../../services/business.service';
 import { showModal, closeAllModals } from '../../../components/modal';
 import { showToast } from '../../../utils/toast';
+import { getPublicAppUrl, PRODUCTION_APP_URL } from '../../../config/api.config';
 import QRCode from 'qrcode';
 
 function injectChannelStyles() {
@@ -257,33 +257,6 @@ function injectChannelStyles() {
       cursor: not-allowed; 
     }
 
-    /* Tips */
-    .tips-list { 
-      list-style: none; 
-      padding: 0; 
-      margin: 0; 
-    }
-    .tip-item {
-      display: flex; 
-      align-items: flex-start; 
-      gap: 10px;
-      padding: 10px 12px; 
-      background: rgba(255,255,255,0.5); 
-      border-radius: 8px; 
-      margin-bottom: 8px;
-      font-size: 0.88rem; 
-      color: var(--text-main);
-      line-height: 1.5;
-    }
-    .tip-item:last-child {
-      margin-bottom: 0;
-    }
-    .tip-icon { 
-      color: var(--primary); 
-      font-size: 1rem;
-      flex-shrink: 0;
-    }
-
     /* Desktop: 2 columns for main content */
     @media (min-width: 900px) {
       .page-header h1 { 
@@ -419,9 +392,7 @@ export async function renderChannelsDetail(businessId: string): Promise<HTMLElem
     grid.className = 'channels-grid';
 
 
-    const currentDomain = window.location.hostname === 'localhost'
-      ? 'https://formachat.com'
-      : window.location.origin;
+    const currentDomain = getPublicAppUrl();
     const prodChatUrl = `${currentDomain}/#/chat/${business._id}`;
 
     const testCard = document.createElement('section');
@@ -466,25 +437,6 @@ export async function renderChannelsDetail(businessId: string): Promise<HTMLElem
       }
     });
     grid.appendChild(testCard);
-
-    const productsCard = document.createElement('section');
-    productsCard.className = 'glass-card';
-    productsCard.innerHTML = `
-      <h2 class="card-title">Products</h2>
-      <p class="card-desc">Add products with photos, prices, and live stock counts. Your chatbot answers questions about them directly.</p>
-    `;
-    const productsLink = document.createElement('a');
-    productsLink.href = `#/dashboard/businesses/${business._id}/products`;
-    productsLink.className = 'test-bot-btn';
-    productsLink.style.textDecoration = 'none';
-    productsLink.innerHTML = `
-      <span>Manage Products</span>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M5 12h14M12 5l7 7-7 7"></path>
-      </svg>
-    `;
-    productsCard.appendChild(productsLink);
-    grid.appendChild(productsCard);
 
     const qrCard = document.createElement('section');
     qrCard.className = 'glass-card';
@@ -594,7 +546,7 @@ export async function renderChannelsDetail(businessId: string): Promise<HTMLElem
     embedWrapper.appendChild(codeSelector);
     
     // Code snippets
-    const widgetScript = `<script src="https://formachat.com/widget.js"></script>
+    const widgetScript = `<script src="${PRODUCTION_APP_URL}/widget.js"></script>
 <script>FormachatWidget.init({ businessId: '${business._id}' });</script>`;
     
     const iframeScript = `<iframe src="${prodChatUrl}" width="100%" height="600" frameborder="0"></iframe>`;
@@ -639,113 +591,6 @@ export async function renderChannelsDetail(businessId: string): Promise<HTMLElem
     
     grid.appendChild(shareCard);
 
-    const tipsCard = document.createElement('section');
-    tipsCard.className = 'glass-card full-width';
-    tipsCard.innerHTML = `
-      <h2 class="card-title">💡 Quick Tips</h2>
-      <ul class="tips-list">
-        <li class="tip-item">
-          <span class="tip-icon">✓</span>
-          <span>Add the chat link to your email signature for instant customer support</span>
-        </li>
-        <li class="tip-item">
-          <span class="tip-icon">✓</span>
-          <span>Print the QR code on receipts, menus, or business cards</span>
-        </li>
-        <li class="tip-item">
-          <span class="tip-icon">✓</span>
-          <span>Share the link in your Instagram, Twitter, or LinkedIn bio</span>
-        </li>
-        <li class="tip-item">
-          <span class="tip-icon">✓</span>
-          <span>Use the floating widget for seamless website integration</span>
-        </li>
-      </ul>
-    `;
-    grid.appendChild(tipsCard);
-
-    // Health score card — best-effort, don't break the page if it fails
-    try {
-      const hs = await getBusinessHealthScore(business._id);
-      const tierColors: Record<string, string> = {
-        excellent: '#16a34a',
-        good: '#636b2f',
-        fair: '#d97706',
-        incomplete: '#dc2626',
-      };
-      const color = tierColors[hs.tier] || '#636b2f';
-      const passedChecks = hs.checks.filter(c => c.achieved).length;
-      const totalChecks = hs.checks.length;
-
-      const hsCard = document.createElement('section');
-      hsCard.className = 'glass-card full-width';
-
-      const hsTitle = document.createElement('h2');
-      hsTitle.className = 'card-title';
-      hsTitle.textContent = 'Knowledge Base Health';
-      hsCard.appendChild(hsTitle);
-
-      const hsDesc = document.createElement('p');
-      hsDesc.style.cssText = 'color:#666; font-size:0.9rem; margin:0 0 16px 0;';
-      hsDesc.textContent = 'The more complete your business profile, the better your AI performs. Fill in any missing items below.';
-      hsCard.appendChild(hsDesc);
-
-      const scoreRow = document.createElement('div');
-      scoreRow.style.cssText = 'display:flex; align-items:center; gap:16px; margin-bottom:16px;';
-
-      const scoreNum = document.createElement('span');
-      scoreNum.style.cssText = `font-size:2.5rem; font-weight:900; color:${color}; line-height:1;`;
-      scoreNum.textContent = `${hs.score}%`;
-      scoreRow.appendChild(scoreNum);
-
-      const scoreInfo = document.createElement('div');
-      const tierLabel = document.createElement('div');
-      tierLabel.style.cssText = `font-size:0.9rem; font-weight:700; color:${color}; text-transform:uppercase; letter-spacing:0.5px;`;
-      tierLabel.textContent = hs.tier;
-      const checksLabel = document.createElement('div');
-      checksLabel.style.cssText = 'font-size:0.85rem; color:#666; margin-top:2px;';
-      checksLabel.textContent = `${passedChecks} of ${totalChecks} checks passed`;
-      scoreInfo.appendChild(tierLabel);
-      scoreInfo.appendChild(checksLabel);
-      scoreRow.appendChild(scoreInfo);
-      hsCard.appendChild(scoreRow);
-
-      // Progress bar
-      const barBg = document.createElement('div');
-      barBg.style.cssText = 'background:#e5e7eb; border-radius:999px; height:8px; margin-bottom:20px; overflow:hidden;';
-      const barFill = document.createElement('div');
-      barFill.style.cssText = `background:${color}; height:100%; border-radius:999px; width:${hs.score}%; transition:width 0.6s ease;`;
-      barBg.appendChild(barFill);
-      hsCard.appendChild(barBg);
-
-      // Check list — only show failing ones
-      const failing = hs.checks.filter(c => !c.achieved);
-      if (failing.length > 0) {
-        const failTitle = document.createElement('p');
-        failTitle.style.cssText = 'font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#666; margin:0 0 10px 0;';
-        failTitle.textContent = 'Still needed:';
-        hsCard.appendChild(failTitle);
-
-        const checkList = document.createElement('ul');
-        checkList.style.cssText = 'margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:8px;';
-        failing.forEach(c => {
-          const li = document.createElement('li');
-          li.style.cssText = 'background:#fff3cd; border:1px solid #ffc107; border-radius:6px; padding:4px 10px; font-size:0.82rem; color:#856404;';
-          li.textContent = c.label;
-          checkList.appendChild(li);
-        });
-        hsCard.appendChild(checkList);
-      }
-
-      const editLink = document.createElement('a');
-      editLink.href = `#/dashboard/businesses/${business._id}/edit`;
-      editLink.style.cssText = 'display:inline-block; margin-top:16px; font-size:0.85rem; color:var(--primary); font-weight:600; text-decoration:none;';
-      editLink.textContent = 'Complete your profile to improve AI performance';
-      hsCard.appendChild(editLink);
-
-      grid.appendChild(hsCard);
-    } catch { /* health score is non-critical */ }
-
     // Widget appearance card — best-effort, don't break the page if it fails
     try {
       grid.appendChild(renderWidgetAppearanceCard(business));
@@ -758,14 +603,14 @@ export async function renderChannelsDetail(businessId: string): Promise<HTMLElem
 
     container.appendChild(grid);
 
-  } catch (error) {
+  } catch (error: any) {
     hideLoadingSpinner(spinner);
     const err = document.createElement('div');
     err.className = 'glass-card';
     err.style.color = 'var(--text-main)';
     err.style.textAlign = 'center';
     err.style.padding = '40px 20px';
-    err.textContent = 'Failed to load channel details. Please try again.';
+    err.textContent = error?.message || 'Failed to load channel details. Please try again.';
     container.appendChild(err);
     console.error(error);
   }
@@ -1026,8 +871,8 @@ function renderWebhookRow(businessId: string, webhook: Webhook, onChange: () => 
       await deleteWebhook(businessId, webhook.id);
       showToast('Webhook deleted.', 'success');
       onChange();
-    } catch {
-      showToast('Failed to delete webhook.', 'error');
+    } catch (error: any) {
+      showToast(error?.message || 'Failed to delete webhook.', 'error');
       deleteBtn.disabled = false;
     }
   });

@@ -1,4 +1,5 @@
 import { createBreadcrumb } from '../../../components/breadcrumb';
+import { renderBusinessSectionHeader } from '../../../components/business-tabs';
 import { createLoadingSpinner, hideLoadingSpinner } from '../../../components/loading-spinner';
 import { getBusinessById, updateBusiness } from '../../../services/business.service';
 import type { UpdateBusinessRequest, Business } from '../../../types/business.types';
@@ -348,11 +349,15 @@ export async function renderBusinessEdit(businessId: string): Promise<HTMLElemen
     
     const breadcrumb = createBreadcrumb([
       { label: 'Businesses', path: '#/dashboard/businesses' },
-      { label: business.basicInfo.businessName }, 
-      { label: 'Edit' }
+      { label: business.basicInfo.businessName },
+      { label: 'Questionnaire' }
     ]);
     container.appendChild(breadcrumb);
-    
+
+    container.appendChild(
+      await renderBusinessSectionHeader(business._id, business.basicInfo.businessName, 'questionnaire')
+    );
+
     const wizardContainer = document.createElement('div');
     wizardContainer.className = 'wizard-container';
     
@@ -379,7 +384,7 @@ export async function renderBusinessEdit(businessId: string): Promise<HTMLElemen
   } catch (error: any) {
     hideLoadingSpinner(spinner);
     const errorMessage = document.createElement('p');
-    errorMessage.textContent = 'Failed to load business. Please try again.';
+    errorMessage.textContent = error?.message || 'Failed to load business. Please try again.';
     errorMessage.className = 'error-message';
     errorMessage.style.display = 'block';
     container.appendChild(errorMessage);

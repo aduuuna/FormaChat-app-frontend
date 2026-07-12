@@ -15,11 +15,13 @@ import { renderBusinessList } from './pages/dashboard/businesses/list';
 import { renderBusinessCreate } from './pages/dashboard/businesses/create';
 import { renderBusinessEdit } from './pages/dashboard/businesses/edit';
 import { renderProductsPage } from './pages/dashboard/businesses/products';
+import { renderDocumentsPage } from './pages/dashboard/businesses/documents';
 import { renderChannelsIndex } from './pages/dashboard/channels/index';
 import { renderChannelsDetail } from './pages/dashboard/channels/detail';
 import { renderAnalyticsIndex } from './pages/dashboard/analytics/index';
 import { renderAnalyticsDetail } from './pages/dashboard/analytics/detail';
 import { renderChatWidget } from './pages/public/chat-widget';
+import { renderNotFound } from './pages/public/not-found';
 
 type RouteHandler = () => void | Promise<void>;
 
@@ -111,7 +113,10 @@ class Router {
         }
         return;
       }
-      this.navigate('/');
+      const appRoot = document.getElementById('app');
+      if (appRoot) {
+        renderTo(appRoot, renderNotFound());
+      }
       return;
     }
 
@@ -225,6 +230,13 @@ class Router {
     this.protectedRoute('/dashboard/businesses/:id/products', async () => {
       const params = this.getParams();
       const content = await renderProductsPage(params.id);
+      const layout = await renderDashboardLayout(content);
+      renderTo(appRoot, layout);
+    });
+
+    this.protectedRoute('/dashboard/businesses/:id/documents', async () => {
+      const params = this.getParams();
+      const content = await renderDocumentsPage(params.id);
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
     });

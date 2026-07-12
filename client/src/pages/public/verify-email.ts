@@ -280,14 +280,14 @@ export function renderVerifyEmail(): HTMLElement {
             const response = await resendOTP(email);
 
             if (!response.success) {
-                showToast('Failed to resend code', 'error');
+                showToast(response.error?.message || 'Failed to resend code', 'error');
                 return;
             }
 
             showToast('Code resent! Check your email.', 'success');
 
-        } catch (error) {
-            showToast('Failed to resend code', 'error');
+        } catch (error: any) {
+            showToast(error?.message || 'Failed to resend code', 'error');
         } finally {
             resendBtn.disabled = false;
             resendBtn.textContent = 'Resend Code';

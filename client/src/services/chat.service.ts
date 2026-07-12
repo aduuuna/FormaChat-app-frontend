@@ -323,9 +323,31 @@ export const deleteSession = async (
 }
 
 
+export interface ChartDataPoint {
+  date: string;
+  count: number;
+}
+
+export interface ChartData {
+  sessionsPerDay: ChartDataPoint[];
+  messagesPerDay: ChartDataPoint[];
+  leadsPerDay: ChartDataPoint[];
+}
+
+export const getChartData = async (businessId: string, days: number = 7): Promise<ChartData> => {
+  const response = await apiGet(CHAT_ENDPOINTS.BUSINESS_CHART_DATA(businessId, days));
+
+  if (!response.success) {
+    throw new Error(response.error.message || 'Failed to fetch chart data');
+  }
+
+  return response.data;
+};
+
 export default {
   getBusinessSessions,
   getBusinessLeads,
   getSessionDetails,
-  getAnalyticsSummary
+  getAnalyticsSummary,
+  getChartData
 };

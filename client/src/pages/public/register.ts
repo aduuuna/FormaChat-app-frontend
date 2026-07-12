@@ -1,8 +1,5 @@
-import { register, verifyEmail, resendOTP } from '../../services/auth.service';
-import { OTPType } from '../../types/auth.types';
+import { register } from '../../services/auth.service';
 import { showToast } from '../../utils/toast';
-
-let registeredEmail = '';
 
 function injectRegisterStyles() {
     const style = document.createElement('style');
@@ -120,15 +117,6 @@ function injectRegisterStyles() {
         }
 
         /* 5. Messages and Links */
-        .success-message {
-            color: var(--success-green);
-            margin-bottom: 15px;
-            padding: 5px;
-            border-left: 3px solid var(--success-green);
-            background: rgba(40, 167, 69, 0.05);
-            border-radius: 4px;
-        }
-        
         .login-link a {
             color: var(--primary);
             text-decoration: none;
@@ -137,16 +125,6 @@ function injectRegisterStyles() {
 
         .login-link a:hover {
             text-decoration: underline;
-        }
-
-        /* OTP Specific Styling */
-        .otp-input {
-            text-align: center;
-            letter-spacing: 15px !important;
-            font-weight: bold;
-            font-size: 1.5rem !important;
-            padding: 15px !important;
-            color: black;
         }
 
          /* Password Toggle Button */
@@ -195,12 +173,8 @@ export function renderRegister(): HTMLElement {
     title.textContent = 'Create Your Account';
     container.appendChild(title);
 
-    const registerForm = createRegisterForm(container);
+    const registerForm = createRegisterForm();
     container.appendChild(registerForm);
-
-    const otpSection = createOTPSection();
-    otpSection.style.display = 'none';
-    container.appendChild(otpSection);
 
     const loginLink = document.createElement('p');
     loginLink.className = 'login-link'; 
@@ -211,7 +185,7 @@ export function renderRegister(): HTMLElement {
     return container;
 }
 
-function createRegisterForm(container: HTMLElement): HTMLElement {
+function createRegisterForm(): HTMLElement {
     const form = document.createElement('form');
 
     const firstNameDiv = createFormField('text', 'firstName', 'First Name', true);
@@ -265,14 +239,16 @@ function createRegisterForm(container: HTMLElement): HTMLElement {
                 return;
             }
 
-            registeredEmail = email;
             form.style.display = 'none';
             showToast('Account created! Check your email for a verification code.', 'success');
 
-            const otpSection = container.querySelector('#otpSection') as HTMLElement;
-            if (otpSection) {
-                otpSection.style.display = 'block';
-            }
+            // Single source of truth for "enter your OTP" is verify-email.ts -
+            // same localStorage handoff login.ts uses for EMAIL_NOT_VERIFIED,
+            // so there's one verification flow instead of two that can drift apart.
+            localStorage.setItem('pendingVerificationEmail', email);
+            setTimeout(() => {
+                window.location.hash = '#/verify-email';
+            }, 800);
 
         } catch (error) {
             showToast('An unexpected error occurred', 'error');
@@ -284,114 +260,6 @@ function createRegisterForm(container: HTMLElement): HTMLElement {
     });
 
     return form;
-}
-
-function createOTPSection(): HTMLElement {
-    const section = document.createElement('div');
-    section.id = 'otpSection';
-
-    const successMsg = document.createElement('p');
-    successMsg.className = 'success-message'; 
-    successMsg.textContent = 'Success! Check your inbox or spam folder for your 6-digit verification code.';
-    section.appendChild(successMsg);
-
-    const form = document.createElement('form');
-
-    const otpDiv = document.createElement('div');
-    otpDiv.className = 'form-field';
-    otpDiv.style.marginBottom = '25px';
-
-    const otpLabel = document.createElement('label');
-    otpLabel.textContent = 'Verification Code (OTP)';
-    otpLabel.className = 'form-label';
-    otpDiv.appendChild(otpLabel);
-
-    const otpInput = document.createElement('input');
-    otpInput.type = 'text';
-    otpInput.name = 'otp';
-    otpInput.required = true;
-    otpInput.maxLength = 6;
-    otpInput.className = 'form-input otp-input'; 
-    otpDiv.appendChild(otpInput);
-
-    form.appendChild(otpDiv);
-
-    const verifyBtn = document.createElement('button');
-    verifyBtn.type = 'submit';
-    verifyBtn.textContent = 'Verify Email';
-    verifyBtn.className = 'btn btn-primary';
-    form.appendChild(verifyBtn);
-
-    const resendBtn = document.createElement('button');
-    resendBtn.type = 'button';
-    resendBtn.textContent = 'Resend Code';
-    resendBtn.className = 'btn btn-secondary'; 
-    form.appendChild(resendBtn);
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const otp = otpInput.value;
-
-        if (otp.length !== 6) {
-            showToast('Please enter a valid 6-digit code', 'error');
-            return;
-        }
-
-        verifyBtn.disabled = true;
-        verifyBtn.textContent = 'Verifying...';
-
-        try {
-            const response = await verifyEmail({
-                email: registeredEmail,
-                otp,
-                type: OTPType.EMAIL_VERIFICATION
-            });
-
-            if (!response.success) {
-                showToast(response.error.message || 'Invalid code', 'error');
-                return;
-            }
-
-            showToast('Email verified! Redirecting to login...', 'success');
-
-            setTimeout(() => {
-                window.location.hash = '#/login';
-            }, 2000);
-
-        } catch (error) {
-            showToast('Verification failed', 'error');
-            console.error('OTP verification error:', error);
-        } finally {
-            verifyBtn.disabled = false;
-            verifyBtn.textContent = 'Verify Email';
-        }
-    });
-
-
-    resendBtn.addEventListener('click', async () => {
-        resendBtn.disabled = true;
-        resendBtn.textContent = 'Sending...';
-
-        try {
-            const response = await resendOTP(registeredEmail);
-
-            if (!response.success) {
-                showToast('Failed to resend code', 'error');
-                return;
-            }
-
-            showToast('Code resent! Check your email.', 'success');
-
-        } catch (error) {
-            showToast('Failed to resend code', 'error');
-        } finally {
-            resendBtn.disabled = false;
-            resendBtn.textContent = 'Resend Code';
-        }
-    });
-
-    section.appendChild(form);
-    return section;
 }
 
 function createFormField(type: string, name: string, label: string, required: boolean): HTMLElement {

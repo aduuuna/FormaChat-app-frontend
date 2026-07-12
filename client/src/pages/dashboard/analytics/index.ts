@@ -113,7 +113,9 @@ export async function renderAnalyticsIndex(): Promise<HTMLElement> {
           id: business._id,
           name: business.basicInfo.businessName,
           createdAt: business.createdAt,
-          status: business.isActive ? 'active' : 'inactive'
+          status: business.isActive ? 'active' : 'inactive',
+          chatbotTone: business.customerSupport?.chatbotTone,
+          vectorStatus: business.vectorInfo?.vectorStatus
         };
         
         const card = createBusinessCard(
@@ -123,14 +125,14 @@ export async function renderAnalyticsIndex(): Promise<HTMLElement> {
         grid.appendChild(card);
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     hideLoadingSpinner(spinner);
-    
+
     const errorMessage = document.createElement('p');
-    errorMessage.textContent = 'Failed to load businesses. Please try again.';
+    errorMessage.textContent = error?.message || 'Failed to load businesses. Please try again.';
     errorMessage.className = 'error-message';
     grid.appendChild(errorMessage);
-    
+
     console.error('Failed to fetch businesses:', error);
   }
   

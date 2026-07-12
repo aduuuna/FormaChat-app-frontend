@@ -133,6 +133,15 @@ function injectNavbarStyles() {
       color: var(--text-muted);
       font-size: 0.9rem;
     }
+
+    /* Below 768px the mobile bottom nav covers Home/Businesses/Channels/
+       Analytics/Settings, so the hamburger (which links to the same pages)
+       would just be redundant navigation. */
+    @media (max-width: 768px) {
+      .sidebar-toggle {
+        display: none;
+      }
+    }
   `;
   document.head.appendChild(style);
 }

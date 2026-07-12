@@ -46,6 +46,25 @@ export const getBusinesses = async (
   return response.data.businesses;
 };
 
+/**
+ * Like getBusinesses(), but returns the full paginated response instead of
+ * just discarding the pagination metadata - needed for rendering page controls.
+ */
+export const getBusinessesPaginated = async (
+  page: number = 1,
+  limit: number = 12
+): Promise<BusinessListResponse> => {
+  const url = `${BUSINESS_ENDPOINTS.LIST}?page=${page}&limit=${limit}`;
+
+  const response: ApiResponse<BusinessListResponse> = await apiGet(url);
+
+  if (!response.success) {
+    throw new Error(response.error.message || 'Failed to fetch businesses');
+  }
+
+  return response.data;
+};
+
 export const getBusinessById = async (
   businessId: string, 
   isPublic: boolean = false

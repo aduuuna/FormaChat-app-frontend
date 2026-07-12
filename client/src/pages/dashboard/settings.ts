@@ -285,8 +285,8 @@ export function renderSettingsPage(): HTMLElement {
           } else {
             showToast((res as any).error?.message || 'Failed to save changes.', 'error');
           }
-        } catch {
-          showToast('Failed to save changes. Please try again.', 'error');
+        } catch (error: any) {
+          showToast(error?.message || 'Failed to save changes. Please try again.', 'error');
         } finally {
           saveProfileBtn.disabled = false;
           saveProfileBtn.textContent = 'Save Changes';
@@ -359,8 +359,8 @@ export function renderSettingsPage(): HTMLElement {
           } else {
             showToast((res as any).error?.message || 'Failed to change password.', 'error');
           }
-        } catch {
-          showToast('Failed to change password. Please try again.', 'error');
+        } catch (error: any) {
+          showToast(error?.message || 'Failed to change password. Please try again.', 'error');
         } finally {
           changePwBtn.disabled = false;
           changePwBtn.textContent = 'Change Password';
@@ -432,8 +432,8 @@ export function renderSettingsPage(): HTMLElement {
             showToast((res as any).error?.message || 'Failed to update two-factor authentication.', 'error');
             tfaToggleBtn.textContent = twoFactorEnabled ? 'Disable Two-Factor Authentication' : 'Enable Two-Factor Authentication';
           }
-        } catch {
-          showToast('Failed to update two-factor authentication. Please try again.', 'error');
+        } catch (error: any) {
+          showToast(error?.message || 'Failed to update two-factor authentication. Please try again.', 'error');
           tfaToggleBtn.textContent = twoFactorEnabled ? 'Disable Two-Factor Authentication' : 'Enable Two-Factor Authentication';
         } finally {
           tfaToggleBtn.disabled = false;
@@ -505,8 +505,8 @@ export function renderSettingsPage(): HTMLElement {
                   revokeBtn.disabled = false;
                   revokeBtn.textContent = 'Sign out';
                 }
-              } catch {
-                showToast('Failed to sign out session. Please try again.', 'error');
+              } catch (error: any) {
+                showToast(error?.message || 'Failed to sign out session. Please try again.', 'error');
                 revokeBtn.disabled = false;
                 revokeBtn.textContent = 'Sign out';
               }
@@ -515,11 +515,11 @@ export function renderSettingsPage(): HTMLElement {
 
             sessionsList.appendChild(row);
           });
-        } catch {
+        } catch (error: any) {
           sessionsList.innerHTML = '';
           const err = document.createElement('p');
           err.className = 'settings-hint';
-          err.textContent = 'Failed to load sessions.';
+          err.textContent = error?.message || 'Failed to load sessions.';
           sessionsList.appendChild(err);
         }
       };
@@ -579,8 +579,8 @@ export function renderSettingsPage(): HTMLElement {
             deleteBtn.disabled = false;
             deleteBtn.textContent = 'Delete Account';
           }
-        } catch {
-          showToast('Failed to delete account. Please try again.', 'error');
+        } catch (error: any) {
+          showToast(error?.message || 'Failed to delete account. Please try again.', 'error');
           deleteBtn.disabled = false;
           deleteBtn.textContent = 'Delete Account';
         }
@@ -588,10 +588,10 @@ export function renderSettingsPage(): HTMLElement {
       dangerCard.appendChild(deleteBtn);
       page.appendChild(dangerCard);
 
-    } catch {
+    } catch (error: any) {
       hideLoadingSpinner(spinner);
       const err = document.createElement('p');
-      err.textContent = 'Failed to load account details. Please refresh.';
+      err.textContent = error?.message || 'Failed to load account details. Please refresh.';
       err.style.color = '#dc2626';
       page.appendChild(err);
     }

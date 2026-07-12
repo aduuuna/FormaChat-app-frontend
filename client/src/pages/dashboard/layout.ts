@@ -1,4 +1,5 @@
 import { createNavbar } from '../../components/navbar';
+import { createMobileBottomNav } from '../../components/mobile-bottom-nav';
 import { getUserDetails } from '../../utils/userDetails.utils';
 
 export async function renderDashboardLayout(content: HTMLElement): Promise<HTMLElement> {
@@ -6,16 +7,17 @@ export async function renderDashboardLayout(content: HTMLElement): Promise<HTMLE
   container.className = 'dashboard-layout';
 
   const userProfile = await getUserDetails();
-  
+
   const navbar = createNavbar(userProfile);
   container.appendChild(navbar);
-  
+
   const contentArea = document.createElement('div');
   contentArea.className = 'dashboard-content';
-  contentArea.style.paddingTop = '80px'; 
+  contentArea.style.paddingTop = '80px';
   contentArea.appendChild(content);
-  
+
   container.appendChild(contentArea);
-  
+  container.appendChild(createMobileBottomNav());
+
   return container;
 }

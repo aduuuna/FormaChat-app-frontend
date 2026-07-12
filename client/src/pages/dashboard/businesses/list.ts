@@ -4,8 +4,9 @@ import type { BusinessCardData } from '../../../components/business-card';
 import { createEmptyState } from '../../../components/empty-state';
 import { createLoadingSpinner, hideLoadingSpinner } from '../../../components/loading-spinner';
 import { showDeleteConfirmation } from '../../../components/delete-confirmation';
-import { getBusinesses, deleteBusiness } from '../../../services/business.service';
+import { getBusinessesPaginated, deleteBusiness } from '../../../services/business.service';
 import { showToast } from '../../../utils/toast';
+import { createPagination } from '../../../components/pagination';
 
 function injectListStyles() {
   if (document.getElementById('business-list-styles')) return;
@@ -167,44 +168,56 @@ export async function renderBusinessList(): Promise<HTMLElement> {
   const grid = document.createElement('div');
   grid.className = 'business-cards-grid';
   container.appendChild(grid);
-  
 
-  const spinner = createLoadingSpinner('Loading businesses...');
-  grid.appendChild(spinner);
-  
-  try {
-    const businesses = await getBusinesses();
-    
-    hideLoadingSpinner(spinner);
-    
-    if (businesses.length === 0) {
-     
-      const emptyState = createEmptyState({
-        message: 'No businesses found. Create your first chatbot to get started!',
-        buttonText: 'Add New Business',
-        buttonPath: '#/dashboard/businesses/create'
-      });
-      grid.appendChild(emptyState);
-    } else {
-      
-      header.appendChild(createButton);
-      
-      businesses.forEach(business => {
-        const card = createBusinessCardWithActions(business);
-        grid.appendChild(card);
-      });
+  const paginationContainer = document.createElement('div');
+  container.appendChild(paginationContainer);
+
+  const loadPage = async (page: number) => {
+    grid.innerHTML = '';
+    paginationContainer.innerHTML = '';
+    const spinner = createLoadingSpinner('Loading businesses...');
+    grid.appendChild(spinner);
+
+    try {
+      const { businesses, pagination } = await getBusinessesPaginated(page, 12);
+
+      hideLoadingSpinner(spinner);
+      grid.innerHTML = '';
+
+      if (businesses.length === 0 && page === 1) {
+        const emptyState = createEmptyState({
+          message: 'No businesses found. Create your first chatbot to get started!',
+          buttonText: 'Add New Business',
+          buttonPath: '#/dashboard/businesses/create'
+        });
+        grid.appendChild(emptyState);
+      } else {
+        header.appendChild(createButton);
+
+        businesses.forEach(business => {
+          const card = createBusinessCardWithActions(business);
+          grid.appendChild(card);
+        });
+
+        paginationContainer.appendChild(createPagination({
+          currentPage: pagination.page,
+          totalPages: pagination.pages,
+          onPageChange: (newPage) => { loadPage(newPage); },
+        }));
+      }
+    } catch (error: any) {
+      hideLoadingSpinner(spinner);
+      grid.innerHTML = '';
+
+      const errorMessage = document.createElement('p');
+      errorMessage.textContent = error?.message || 'Failed to load businesses. Please try again.';
+      errorMessage.className = 'error-message';
+      grid.appendChild(errorMessage);
     }
-  } catch (error) {
-    hideLoadingSpinner(spinner);
-    
-    const errorMessage = document.createElement('p');
-    errorMessage.textContent = 'Failed to load businesses. Please try again.';
-    errorMessage.className = 'error-message';
-    grid.appendChild(errorMessage);
-    
-    console.error('Failed to fetch businesses:', error);
-  }
-  
+  };
+
+  await loadPage(1);
+
   return container;
 }
 
@@ -217,7 +230,9 @@ function createBusinessCardWithActions(business: any): HTMLElement {
     id: business._id,
     name: business.basicInfo.businessName,
     createdAt: business.createdAt,
-    status: business.isActive ? 'active' : 'inactive'
+    status: business.isActive ? 'active' : 'inactive',
+    chatbotTone: business.customerSupport?.chatbotTone,
+    vectorStatus: business.vectorInfo?.vectorStatus
   };
   
  
@@ -272,10 +287,10 @@ async function handleDeleteBusiness(
         
         cardElement.remove();
         showToast(`"${businessName}" deleted successfully.`, 'success');
-      } catch (error) {
+      } catch (error: any) {
         cardElement.style.opacity = '1';
         cardElement.style.pointerEvents = 'auto';
-        showToast('Failed to delete business. Please try again.', 'error');
+        showToast(error?.message || 'Failed to delete business. Please try again.', 'error');
         console.error('Delete error:', error);
       }
     },

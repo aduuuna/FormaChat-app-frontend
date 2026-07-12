@@ -2,6 +2,7 @@ export interface EmptyStateConfig {
   message: string;
   buttonText?: string;
   buttonPath?: string;
+  checklist?: string[];
 }
 
 function injectEmptyStateStyles() {
@@ -102,6 +103,37 @@ function injectEmptyStateStyles() {
       line-height: 1;
     }
 
+    /* 4. Next-steps checklist */
+    .empty-checklist {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 26px 0;
+      text-align: left;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .empty-checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: #444;
+    }
+    .empty-checklist-number {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--secondary);
+      color: #3a4014;
+      font-size: 0.75rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     /* Animation Keyframes */
     @keyframes float-y {
       0%, 100% { transform: translateY(0); }
@@ -133,7 +165,23 @@ export function createEmptyState(config: EmptyStateConfig): HTMLElement {
   message.className = 'empty-message';
   message.textContent = config.message;
   container.appendChild(message);
-  
+
+  if (config.checklist && config.checklist.length > 0) {
+    const list = document.createElement('ol');
+    list.className = 'empty-checklist';
+    config.checklist.forEach((step, i) => {
+      const item = document.createElement('li');
+      item.className = 'empty-checklist-item';
+      const num = document.createElement('span');
+      num.className = 'empty-checklist-number';
+      num.textContent = String(i + 1);
+      item.appendChild(num);
+      item.appendChild(document.createTextNode(step));
+      list.appendChild(item);
+    });
+    container.appendChild(list);
+  }
+
   if (config.buttonText && config.buttonPath) {
     const button = document.createElement('button');
     button.className = 'btn-empty-action';

@@ -88,6 +88,19 @@ function injectSessionStyles() {
     .info-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
     .info-value { font-size: 0.95rem; font-weight: 600; color: var(--text-main); word-break: break-all; }
 
+    .info-value-row { display: flex; align-items: center; gap: 4px; }
+    .copy-btn-icon {
+      background: transparent;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      padding: 4px;
+      opacity: 0.7;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .copy-btn-icon:hover { opacity: 1; transform: scale(1.1); }
+
     /* Status Badge */
     .status-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
     .status-active { background: #dcfce7; color: #166534; }
@@ -327,7 +340,7 @@ function buildSessionDetailsContent(sessionDetails: any, businessId: string, ses
 
   const infoGrid = document.createElement('div');
   infoGrid.className = 'session-info-grid';
-  infoGrid.appendChild(createInfoItem('Session ID', sessionDetails.session.sessionId));
+  infoGrid.appendChild(createSessionIdItem(sessionDetails.session.sessionId));
   const statusHtml = `<span class="status-badge status-${sessionDetails.session.status.toLowerCase()}">${sessionDetails.session.status}</span>`;
   infoGrid.appendChild(createInfoItem('Status', statusHtml));
   infoGrid.appendChild(createInfoItem('Started', new Date(sessionDetails.session.startedAt).toLocaleString()));
@@ -412,6 +425,45 @@ function createInfoItem(label: string, valueHtml: string): HTMLElement {
   div.appendChild(valueElement);
 
   return div;
+}
+
+function createSessionIdItem(sessionId: string): HTMLElement {
+  const div = document.createElement('div');
+  div.className = 'info-item';
+
+  const labelElement = document.createElement('span');
+  labelElement.className = 'info-label';
+  labelElement.textContent = 'Session ID';
+  div.appendChild(labelElement);
+
+  const row = document.createElement('div');
+  row.className = 'info-value-row';
+
+  const valueElement = document.createElement('span');
+  valueElement.className = 'info-value';
+  valueElement.textContent = sessionId;
+  row.appendChild(valueElement);
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn-icon';
+  copyBtn.title = 'Copy Session ID';
+  copyBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+  copyBtn.onclick = () => copyToClipboard(sessionId, copyBtn);
+  row.appendChild(copyBtn);
+
+  div.appendChild(row);
+  return div;
+}
+
+async function copyToClipboard(text: string, button: HTMLElement): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    const originalContent = button.innerHTML;
+    button.innerHTML = '✓';
+    setTimeout(() => { button.innerHTML = originalContent; }, 1500);
+  } catch {
+    /* clipboard access denied - silently ignore, non-critical */
+  }
 }
 
 

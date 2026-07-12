@@ -1,10 +1,13 @@
 import { createBreadcrumb } from '../../../components/breadcrumb';
 import { createLoadingSpinner, hideLoadingSpinner } from '../../../components/loading-spinner';
-import { showSessionDetailsModal } from '../../../components/session-details-modal'; 
+import { createEmptyState } from '../../../components/empty-state';
+import { showSessionDetailsModal } from '../../../components/session-details-modal';
 import { getBusinessById } from '../../../services/business.service';
 import { showLeadDetailsModal } from '../../../components/lead-details-modal';
-import { getDashboardSummary} from '../../../services/chat.service';
+import { getDashboardSummary, getChartData } from '../../../services/chat.service';
 import { showModal } from '../../../components/modal';
+import { renderLineChart, renderBarChart } from '../../../components/charts';
+import { createPagination } from '../../../components/pagination';
 
 function formatDateTime(dateString: string | Date): string {
     const date = new Date(dateString);
@@ -78,6 +81,14 @@ function injectAnalyticsDetailStyles() {
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
             margin-bottom: 40px;
         }
@@ -331,6 +342,18 @@ export async function renderAnalyticsDetail(businessId: string): Promise<HTMLEle
         statsSection.appendChild(statsGrid);
         container.appendChild(statsSection);
 
+        // Charts — best-effort, don't break the page if chart data fails to load
+        try {
+            const chartData = await getChartData(businessId, 7);
+
+            const chartsGrid = document.createElement('div');
+            chartsGrid.className = 'charts-grid';
+            chartsGrid.appendChild(renderLineChart('Sessions per day', chartData.sessionsPerDay));
+            chartsGrid.appendChild(renderBarChart('Messages per day', chartData.messagesPerDay));
+            chartsGrid.appendChild(renderLineChart('Leads captured per day', chartData.leadsPerDay));
+            container.appendChild(chartsGrid);
+        } catch { /* charts are non-critical */ }
+
         const mainContentGrid = document.createElement('div');
         mainContentGrid.className = 'main-content-grid';
 
@@ -460,27 +483,26 @@ export async function renderAnalyticsDetail(businessId: string): Promise<HTMLEle
         container.appendChild(mainContentGrid);
         
         if (recentSessions.length === 0 && recentLeads.length === 0) {
-            const emptyState = document.createElement('div');
-            emptyState.className = 'empty-state';
-            emptyState.style.padding = '50px';
-            emptyState.style.textAlign = 'center';
-            emptyState.style.fontSize = '1.1rem';
-            emptyState.style.color = 'var(--text-muted)';
-            emptyState.innerHTML = `
-                <p>📊 No chat activity yet for this business.</p>
-                <p>Share your bot URL to start receiving conversations and tracking data!</p>
-            `;
-            container.appendChild(emptyState);
+            container.appendChild(createEmptyState({
+                message: 'No chat activity yet for this business.',
+                checklist: [
+                    'Share your bot link with customers',
+                    'Embed the widget on your website',
+                    'Test it yourself in the simulator',
+                ],
+                buttonText: 'Go to Channels',
+                buttonPath: `#/dashboard/channels/${businessId}`,
+            }));
         }
         
-    } catch (error) {
+    } catch (error: any) {
         hideLoadingSpinner(spinner);
-        
+
         const errorMessage = document.createElement('p');
-        errorMessage.textContent = 'Failed to load analytics. Please try again.';
+        errorMessage.textContent = error?.message || 'Failed to load analytics. Please try again.';
         errorMessage.className = 'error-message';
         container.appendChild(errorMessage);
-        
+
         console.error('Failed to fetch analytics:', error);
     }
     
@@ -658,94 +680,123 @@ async function showAllSessionsModal(businessId: string): Promise<void> {
     });
 
     // DATA LOADER
+    const PAGE_SIZE = 15;
+    let currentPage = 1;
+
+    const renderSessionsPage = (sessions: any[]) => {
+        const tableContainer = document.createElement('div');
+        tableContainer.className = 'sessions-table';
+
+        const tableHeader = document.createElement('div');
+        tableHeader.className = 'table-row table-header';
+        tableHeader.innerHTML = `
+            <div class="table-cell"></div>
+            <div class="table-cell">Session ID</div>
+            <div class="table-cell">Status</div>
+            <div class="table-cell">Contact</div>
+
+        `;
+        tableContainer.appendChild(tableHeader);
+
+        if (sessions.length === 0) {
+             tableContainer.innerHTML = '<div style="padding:20px; text-align:center;">No sessions found.</div>';
+        }
+
+        const totalPages = Math.max(1, Math.ceil(sessions.length / PAGE_SIZE));
+        currentPage = Math.min(currentPage, totalPages);
+        const pageSessions = sessions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+        pageSessions.forEach(session => {
+            const row = document.createElement('div');
+            row.className = 'table-row';
+            row.style.cursor = 'pointer';
+
+            const contact = session.contact;
+            let contactDisplay = '-';
+            let contactClass = 'contact-not-captured';
+
+            if (contact?.email) {
+                contactDisplay = contact.email;
+                contactClass = 'contact-captured';
+            } else if (contact?.phone) {
+                contactDisplay = contact.phone;
+                contactClass = 'contact-captured';
+            }
+
+            row.innerHTML = `
+                <div class="table-cell">
+                    <input type="checkbox" class="row-checkbox" value="${session.sessionId}">
+                </div>
+                <div class="table-cell" title="${session.sessionId}">${session.sessionId.substring(0, 10)}...</div>
+                <div class="table-cell"><span class="status-badge status-${session.status}">${session.status}</span></div>
+
+                <div class="table-cell ${contactClass}">${contactDisplay}</div>
+
+            `;
+
+            const checkbox = row.querySelector('.row-checkbox') as HTMLInputElement;
+            checkbox.checked = selectedSessionIds.has(session.sessionId);
+
+            // Prevent row click when clicking checkbox
+            checkbox.addEventListener('click', (e) => e.stopPropagation());
+
+            checkbox.addEventListener('change', (e) => {
+                const checked = (e.target as HTMLInputElement).checked;
+                if (checked) {
+                    selectedSessionIds.add(session.sessionId);
+                } else {
+                    selectedSessionIds.delete(session.sessionId);
+                }
+
+                if (selectedSessionIds.size > 0) {
+                    deleteBtn.classList.add('visible');
+                    deleteBtn.innerHTML = `Delete (${selectedSessionIds.size})`;
+                } else {
+                    deleteBtn.classList.remove('visible');
+                }
+            });
+
+            row.addEventListener('click', async () => {
+                // Note: We don't check hasDeletedItems here because single session deletion
+                // handles its own reload inside session-details-modal if you updated that too.
+                // If not, simply closing this main modal will trigger the reload anyway.
+                await showSessionDetailsModal(businessId, session.sessionId);
+            });
+
+            tableContainer.appendChild(row);
+        });
+
+        const wrapper = document.createElement('div');
+        wrapper.appendChild(tableContainer);
+        if (sessions.length > PAGE_SIZE) {
+            wrapper.appendChild(createPagination({
+                currentPage,
+                totalPages,
+                onPageChange: (page) => {
+                    currentPage = page;
+                    const modalContent = modalOverlay.querySelector('.modal-content');
+                    if (modalContent) {
+                        modalContent.innerHTML = '';
+                        modalContent.appendChild(renderSessionsPage(sessions));
+                    }
+                },
+            }));
+        }
+        return wrapper;
+    };
+
     const loadSessions = async () => {
         try {
             selectedSessionIds.clear();
             deleteBtn.classList.remove('visible');
+            currentPage = 1;
 
             const sessions = await getBusinessSessions(businessId, undefined, 1, 100);
-
-            const tableContainer = document.createElement('div');
-            tableContainer.className = 'sessions-table';
-            
-            const tableHeader = document.createElement('div');
-            tableHeader.className = 'table-row table-header';
-            tableHeader.innerHTML = `
-                <div class="table-cell"></div>
-                <div class="table-cell">Session ID</div>
-                <div class="table-cell">Status</div>
-                <div class="table-cell">Contact</div>
-
-            `;
-            tableContainer.appendChild(tableHeader);
-
-            if (sessions.length === 0) {
-                 tableContainer.innerHTML = '<div style="padding:20px; text-align:center;">No sessions found.</div>';
-            }
-
-            sessions.forEach(session => {
-                const row = document.createElement('div');
-                row.className = 'table-row';
-                row.style.cursor = 'pointer';
-
-                const contact = session.contact;
-                let contactDisplay = '-';
-                let contactClass = 'contact-not-captured';
-                
-                if (contact?.email) {
-                    contactDisplay = contact.email;
-                    contactClass = 'contact-captured';
-                } else if (contact?.phone) {
-                    contactDisplay = contact.phone;
-                    contactClass = 'contact-captured';
-                }
-
-                row.innerHTML = `
-                    <div class="table-cell">
-                        <input type="checkbox" class="row-checkbox" value="${session.sessionId}">
-                    </div>
-                    <div class="table-cell" title="${session.sessionId}">${session.sessionId.substring(0, 10)}...</div>
-                    <div class="table-cell"><span class="status-badge status-${session.status}">${session.status}</span></div>
-                 
-                    <div class="table-cell ${contactClass}">${contactDisplay}</div>
-                  
-                `;
-
-                const checkbox = row.querySelector('.row-checkbox') as HTMLInputElement;
-                
-                // Prevent row click when clicking checkbox
-                checkbox.addEventListener('click', (e) => e.stopPropagation());
-
-                checkbox.addEventListener('change', (e) => {
-                    const checked = (e.target as HTMLInputElement).checked;
-                    if (checked) {
-                        selectedSessionIds.add(session.sessionId);
-                    } else {
-                        selectedSessionIds.delete(session.sessionId);
-                    }
-
-                    if (selectedSessionIds.size > 0) {
-                        deleteBtn.classList.add('visible');
-                        deleteBtn.innerHTML = `Delete (${selectedSessionIds.size})`;
-                    } else {
-                        deleteBtn.classList.remove('visible');
-                    }
-                });
-
-                row.addEventListener('click', async () => {
-                    // Note: We don't check hasDeletedItems here because single session deletion 
-                    // handles its own reload inside session-details-modal if you updated that too.
-                    // If not, simply closing this main modal will trigger the reload anyway.
-                    await showSessionDetailsModal(businessId, session.sessionId);
-                });
-
-                tableContainer.appendChild(row);
-            });
 
             const modalContent = modalOverlay.querySelector('.modal-content');
             if (modalContent) {
                 modalContent.innerHTML = '';
-                modalContent.appendChild(tableContainer);
+                modalContent.appendChild(renderSessionsPage(sessions));
             }
         } catch (error) {
             console.error('Failed to load sessions:', error);
@@ -790,41 +841,69 @@ async function showAllLeadsModal(businessId: string): Promise<void> {
         });
         wrapper.appendChild(exportBtn);
 
-        const tableContainer = document.createElement('div');
-        tableContainer.className = 'leads-table';
+        const LEADS_PAGE_SIZE = 15;
+        let currentLeadsPage = 1;
 
-        const tableHeader = document.createElement('div');
-        tableHeader.className = 'table-row table-header';
-        tableHeader.innerHTML = `
-            <div class="table-cell">Session ID</div>
-            <div class="table-cell">Contact</div>
-            <div class="table-cell">Captured At</div>
-        `;
-        tableContainer.appendChild(tableHeader);
+        const renderLeadsTable = (): HTMLElement => {
+            const tableContainer = document.createElement('div');
+            tableContainer.className = 'leads-table';
 
-        leads.forEach(lead => {
-            const row = document.createElement('div');
-            row.className = 'table-row';
-            row.style.cursor = 'pointer';
-
-            row.innerHTML = `
-                <div class="table-cell" title="${lead.firstSessionId}">${lead.firstSessionId.substring(0, 10)}...</div>
-                <div class="table-cell">${lead.email || '-'}</div>
-                <div class="table-cell">${formatDateTime(lead.firstContactDate)}</div>
+            const tableHeader = document.createElement('div');
+            tableHeader.className = 'table-row table-header';
+            tableHeader.innerHTML = `
+                <div class="table-cell">Session ID</div>
+                <div class="table-cell">Contact</div>
+                <div class="table-cell">Captured At</div>
             `;
+            tableContainer.appendChild(tableHeader);
 
-            row.addEventListener('click', () => {
-                showLeadDetailsModal(lead, businessId);
+            const totalPages = Math.max(1, Math.ceil(leads.length / LEADS_PAGE_SIZE));
+            currentLeadsPage = Math.min(currentLeadsPage, totalPages);
+            const pageLeads = leads.slice((currentLeadsPage - 1) * LEADS_PAGE_SIZE, currentLeadsPage * LEADS_PAGE_SIZE);
+
+            pageLeads.forEach(lead => {
+                const row = document.createElement('div');
+                row.className = 'table-row';
+                row.style.cursor = 'pointer';
+
+                row.innerHTML = `
+                    <div class="table-cell" title="${lead.firstSessionId}">${lead.firstSessionId.substring(0, 10)}...</div>
+                    <div class="table-cell">${lead.email || '-'}</div>
+                    <div class="table-cell">${formatDateTime(lead.firstContactDate)}</div>
+                `;
+
+                row.addEventListener('click', () => {
+                    showLeadDetailsModal(lead, businessId);
+                });
+
+                tableContainer.appendChild(row);
             });
 
-            tableContainer.appendChild(row);
-        });
+            const tableWrapper = document.createElement('div');
+            tableWrapper.appendChild(tableContainer);
+            if (leads.length > LEADS_PAGE_SIZE) {
+                tableWrapper.appendChild(createPagination({
+                    currentPage: currentLeadsPage,
+                    totalPages,
+                    onPageChange: (page) => {
+                        currentLeadsPage = page;
+                        const modalContent = modal.querySelector('.modal-content');
+                        if (modalContent) {
+                            modalContent.innerHTML = '';
+                            modalContent.appendChild(wrapper);
+                            modalContent.appendChild(renderLeadsTable());
+                        }
+                    },
+                }));
+            }
+            return tableWrapper;
+        };
 
         const modalContent = modal.querySelector('.modal-content');
         if (modalContent) {
             modalContent.innerHTML = '';
-            modalContent.appendChild(wrapper); 
-            modalContent.appendChild(tableContainer);
+            modalContent.appendChild(wrapper);
+            modalContent.appendChild(renderLeadsTable());
         }
     } catch (error) {
         console.error('Failed to load leads:', error);

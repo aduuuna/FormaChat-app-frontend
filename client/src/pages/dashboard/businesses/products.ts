@@ -1,6 +1,7 @@
 import { createBreadcrumb } from '../../../components/breadcrumb';
 import { createLoadingSpinner, hideLoadingSpinner } from '../../../components/loading-spinner';
 import { createEmptyState } from '../../../components/empty-state';
+import { renderBusinessSectionHeader } from '../../../components/business-tabs';
 import { getBusinessById } from '../../../services/business.service';
 import {
   listProducts,
@@ -118,11 +119,14 @@ export async function renderProductsPage(businessId: string): Promise<HTMLElemen
     ]);
     container.appendChild(breadcrumb);
 
+    container.appendChild(
+      await renderBusinessSectionHeader(business._id, business.basicInfo.businessName, 'products')
+    );
+
     const header = document.createElement('div');
     header.className = 'products-header';
     header.innerHTML = `
       <div>
-        <h1>Products</h1>
         <p>Add products with a photo, price, and stock count. Your chatbot answers questions about these directly, and stock updates show up immediately - no need to resync anything.</p>
       </div>
     `;
@@ -160,11 +164,11 @@ export async function renderProductsPage(businessId: string): Promise<HTMLElemen
     addBtn.addEventListener('click', () => openProductModal(businessId, null, refresh));
 
     await refresh();
-  } catch (error) {
+  } catch (error: any) {
     hideLoadingSpinner(spinner);
     const err = document.createElement('p');
     err.style.cssText = 'text-align:center; padding:40px 20px; color:var(--text-main);';
-    err.textContent = 'Failed to load business. Please try again.';
+    err.textContent = error?.message || 'Failed to load business. Please try again.';
     container.appendChild(err);
     console.error(error);
   }
@@ -236,8 +240,8 @@ function renderProductCard(businessId: string, product: Product, onChange: () =>
     try {
       await updateProductStock(businessId, product._id, value);
       showToast('Stock updated.', 'success');
-    } catch {
-      showToast('Failed to update stock.', 'error');
+    } catch (error: any) {
+      showToast(error?.message || 'Failed to update stock.', 'error');
     } finally {
       stockSaveBtn.disabled = false;
     }
@@ -264,8 +268,8 @@ function renderProductCard(businessId: string, product: Product, onChange: () =>
     try {
       await updateProduct(businessId, product._id, { isActive: !product.isActive });
       onChange();
-    } catch {
-      showToast('Failed to update product.', 'error');
+    } catch (error: any) {
+      showToast(error?.message || 'Failed to update product.', 'error');
       toggleBtn.disabled = false;
     }
   });
@@ -281,8 +285,8 @@ function renderProductCard(businessId: string, product: Product, onChange: () =>
       await deleteProduct(businessId, product._id);
       showToast('Product deleted.', 'success');
       onChange();
-    } catch {
-      showToast('Failed to delete product.', 'error');
+    } catch (error: any) {
+      showToast(error?.message || 'Failed to delete product.', 'error');
       deleteBtn.disabled = false;
     }
   });

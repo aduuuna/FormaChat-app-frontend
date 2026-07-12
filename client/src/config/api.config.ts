@@ -4,6 +4,17 @@ export const API_BASE_URLS = {
   CHAT: 'https://formachat.onrender.com/api/chat',
 } as const;
 
+/**
+ * The public-facing production domain, used for share links / QR codes / embed
+ * snippets shown to business owners - these always need a real public URL,
+ * even when the dashboard itself is being viewed on localhost.
+ */
+export const PRODUCTION_APP_URL = 'https://formachat.com';
+
+export function getPublicAppUrl(): string {
+  return window.location.hostname === 'localhost' ? PRODUCTION_APP_URL : window.location.origin;
+}
+
 export const AUTH_ENDPOINTS = {
   REGISTER: `${API_BASE_URLS.AUTH}/register`,
   LOGIN: `${API_BASE_URLS.AUTH}/login`,
@@ -47,6 +58,8 @@ export const BUSINESS_ENDPOINTS = {
   PRODUCT_DETAIL: (businessId: string, productId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/products/${productId}`,
   PRODUCT_STOCK: (businessId: string, productId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/products/${productId}/stock`,
   PRODUCT_IMAGE_UPLOAD: (businessId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/products/upload-image`,
+  DOCUMENT_UPLOAD: (businessId: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/documents/upload`,
+  DOCUMENT_DELETE: (businessId: string, fileName: string) => `${API_BASE_URLS.BUSINESS}/businesses/${businessId}/documents/${encodeURIComponent(fileName)}`,
 } as const;
 
 export const CHAT_ENDPOINTS = {
@@ -60,8 +73,10 @@ export const CHAT_ENDPOINTS = {
   BUSINESS_LEADS: (businessId: string) => `${API_BASE_URLS.CHAT}/business/${businessId}/leads`,
   BUSINESS_SESSION_DETAILS: (businessId: string, sessionId: string) => 
     `${API_BASE_URLS.CHAT}/business/${businessId}/session/${sessionId}`,
-  BUSINESS_DASHBOARD_SUMMARY: (businessId: string) => 
+  BUSINESS_DASHBOARD_SUMMARY: (businessId: string) =>
     `${API_BASE_URLS.CHAT}/business/${businessId}/dashboard-summary`,
+  BUSINESS_CHART_DATA: (businessId: string, days: number = 7) =>
+    `${API_BASE_URLS.CHAT}/business/${businessId}/analytics/chart-data?days=${days}`,
   SESSION_DELETE: (businessId: string, sessionId: string) => 
   `${API_BASE_URLS.CHAT}/business/${businessId}/session/${sessionId}`,
 } as const;

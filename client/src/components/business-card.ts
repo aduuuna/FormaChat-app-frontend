@@ -3,6 +3,8 @@ export interface BusinessCardData {
   name: string;
   createdAt: Date | string;
   status?: 'active' | 'inactive';
+  chatbotTone?: string;
+  vectorStatus?: 'pending' | 'completed' | 'failed' | 'frozen';
 }
 
 function injectBusinessCardStyles() {
@@ -126,6 +128,27 @@ function injectBusinessCardStyles() {
       flex-shrink: 0;
     }
 
+    /* Meta badges row (tone + vector status) */
+    .card-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .meta-badge {
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 10px;
+      background: rgba(99, 107, 47, 0.08);
+      color: var(--primary);
+    }
+
+    .meta-badge-vector-completed { background: rgba(16, 185, 129, 0.1); color: #059669; }
+    .meta-badge-vector-pending { background: rgba(217, 119, 6, 0.1); color: #d97706; }
+    .meta-badge-vector-failed { background: rgba(220, 38, 38, 0.1); color: #dc2626; }
+    .meta-badge-vector-frozen { background: rgba(107, 114, 128, 0.12); color: #6b7280; }
+
     /* Responsive */
     @media (max-width: 768px) {
       .business-card {
@@ -197,6 +220,33 @@ export function createBusinessCard(
   name.className = 'business-name';
   name.textContent = business.name;
   card.appendChild(name);
+
+  if (business.chatbotTone || business.vectorStatus) {
+    const metaRow = document.createElement('div');
+    metaRow.className = 'card-meta-row';
+
+    if (business.chatbotTone) {
+      const toneBadge = document.createElement('span');
+      toneBadge.className = 'meta-badge';
+      toneBadge.textContent = business.chatbotTone;
+      metaRow.appendChild(toneBadge);
+    }
+
+    if (business.vectorStatus) {
+      const vectorLabels: Record<string, string> = {
+        completed: 'Knowledge base ready',
+        pending: 'Syncing...',
+        failed: 'Sync failed',
+        frozen: 'Frozen',
+      };
+      const vectorBadge = document.createElement('span');
+      vectorBadge.className = `meta-badge meta-badge-vector-${business.vectorStatus}`;
+      vectorBadge.textContent = vectorLabels[business.vectorStatus] || business.vectorStatus;
+      metaRow.appendChild(vectorBadge);
+    }
+
+    card.appendChild(metaRow);
+  }
 
   const footer = document.createElement('div');
   footer.className = 'card-footer';

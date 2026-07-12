@@ -1,0 +1,21 @@
+{
+  "name": "FormaChat",
+  "short_name": "FormaChat",
+  "description": "AI-powered customer support chatbots for your business.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#636b2f",
+  "icons": [
+    {
+      "src": "/assets/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
