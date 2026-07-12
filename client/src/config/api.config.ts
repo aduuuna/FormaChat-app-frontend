@@ -8,8 +8,11 @@ export const API_BASE_URLS = {
  * The public-facing production domain, used for share links / QR codes / embed
  * snippets shown to business owners - these always need a real public URL,
  * even when the dashboard itself is being viewed on localhost.
+ * www, not apex: formachat.com 307-redirects to www.formachat.com in
+ * production, so generating apex links here would cost every one of them an
+ * extra redirect hop for no reason.
  */
-export const PRODUCTION_APP_URL = 'https://formachat.com';
+export const PRODUCTION_APP_URL = 'https://www.formachat.com';
 
 export function getPublicAppUrl(): string {
   return window.location.hostname === 'localhost' ? PRODUCTION_APP_URL : window.location.origin;

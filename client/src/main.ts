@@ -14,6 +14,22 @@ import {
 
 console.log('[App] Initializing FormaChat Frontend...');
 
+/**
+ * index.html ships a hidden static <h1> + "seo-hidden" content block as a
+ * no-JS crawler fallback. Once this script runs, real content is about to
+ * render into #app - leaving the hidden duplicate behind creates a mismatch
+ * between what a no-JS fetch sees and what Google's JS-rendering crawler
+ * sees post-render (hidden text that disagrees with the visible page is
+ * exactly the pattern Google's spam policies flag as "hidden text"). A
+ * crawler that never executes JS still sees the fallback content in the
+ * initial HTML response, which is all that matters for that audience -
+ * removing it here only affects the post-JS DOM state.
+ */
+function removeStaticSeoFallback(): void {
+  document.querySelector('body > h1')?.remove();
+  document.querySelector('.seo-hidden')?.remove();
+}
+
 function isEmbedMode(): boolean {
  
   return window.location.hash.includes('embed=true') || 
@@ -27,6 +43,8 @@ function isChatRoute(): boolean {
 }
 
 async function initApp() {
+  removeStaticSeoFallback();
+
   if (isEmbedMode()) {
     console.log('[App] Embed/Widget mode detected.');
     (window as any).__EMBED_MODE__ = true;

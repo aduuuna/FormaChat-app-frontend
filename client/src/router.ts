@@ -29,17 +29,25 @@ interface Route {
   path: string;
   handler: RouteHandler;
   isProtected: boolean;
+  // Browser tab title for this route. Hash-routed SPAs serve identical HTML
+  // (and identical og:*/twitter:* meta tags) for every path - the meta tags
+  // can't be fixed without server-side rendering per route, but the tab
+  // title/history entry is a real DOM API we control client-side, so at
+  // least bookmarks, browser history, and the tab itself are accurate.
+  title?: string;
 }
+
+const DEFAULT_TITLE = 'FormaChat - AI-Powered Customer Support for Your Business';
 
 class Router {
   private routes: Route[] = [];
 
-  public route(path: string, handler: RouteHandler): void {
-    this.routes.push({ path, handler, isProtected: false });
+  public route(path: string, handler: RouteHandler, title?: string): void {
+    this.routes.push({ path, handler, isProtected: false, title });
   }
 
-  public protectedRoute(path: string, handler: RouteHandler): void {
-    this.routes.push({ path, handler, isProtected: true });
+  public protectedRoute(path: string, handler: RouteHandler, title?: string): void {
+    this.routes.push({ path, handler, isProtected: true, title });
   }
 
   public navigate(path: string): void {
@@ -122,6 +130,10 @@ class Router {
 
     const { route, params } = match;
 
+    if (!embedMode) {
+      document.title = route.title || DEFAULT_TITLE;
+    }
+
     if (embedMode) {
       console.log('[Router] Embed mode active');
      
@@ -173,20 +185,20 @@ class Router {
     const appRoot = document.getElementById('app');
     if (!appRoot) return;
 
-    this.route('/', () => renderTo(appRoot, renderHome()));
-    this.route('/home', () => renderTo(appRoot, renderHome()));
-    this.route('/login', () => renderTo(appRoot, renderLogin()));
-    this.route('/register', () => renderTo(appRoot, renderRegister()));
-    this.route('/verify-email', () => renderTo(appRoot, renderVerifyEmail()));
-    this.route('/forgot-password', () => renderTo(appRoot, renderForgotPassword()));
-    this.route('/magic-login', () => renderTo(appRoot, renderMagicLogin()));
+    this.route('/', () => renderTo(appRoot, renderHome()), DEFAULT_TITLE);
+    this.route('/home', () => renderTo(appRoot, renderHome()), DEFAULT_TITLE);
+    this.route('/login', () => renderTo(appRoot, renderLogin()), 'Log In - FormaChat');
+    this.route('/register', () => renderTo(appRoot, renderRegister()), 'Create Your Account - FormaChat');
+    this.route('/verify-email', () => renderTo(appRoot, renderVerifyEmail()), 'Verify Your Email - FormaChat');
+    this.route('/forgot-password', () => renderTo(appRoot, renderForgotPassword()), 'Reset Your Password - FormaChat');
+    this.route('/magic-login', () => renderTo(appRoot, renderMagicLogin()), 'Signing You In - FormaChat');
 
     this.route('/chat/:businessId', async () => {
       const params = this.getParams();
       const embedMode = this.isEmbedMode();
-      
+
       console.log('[Router] Loading chat widget...', { businessId: params.businessId, embedMode });
-      
+
       try {
         const content = await renderChatWidget(params.businessId, embedMode);
         renderTo(appRoot, content);
@@ -194,78 +206,78 @@ class Router {
         console.error('[Router] Chat load error', error);
         appRoot.innerHTML = '<div style="color:red; text-align:center; padding:20px;">Failed to load chat.</div>';
       }
-    });
+    }, 'Chat - FormaChat');
 
     this.protectedRoute('/dashboard/settings', async () => {
       const content = renderSettingsPage();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
-    });
+    }, 'Settings - FormaChat');
 
     this.protectedRoute('/dashboard', async () => {
       const content = renderDashboardHome();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
-    });
+    }, 'Dashboard - FormaChat');
 
     this.protectedRoute('/dashboard/businesses', async () => {
       const content = await renderBusinessList();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
-    });
+    }, 'Your Businesses - FormaChat');
 
     this.protectedRoute('/dashboard/businesses/create', async () => {
       const content = await renderBusinessCreate();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
-    });
+    }, 'Create a Business - FormaChat');
 
     this.protectedRoute('/dashboard/businesses/:id/edit', async () => {
       const params = this.getParams();
       const content = await renderBusinessEdit(params.id);
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
-    });
+    }, 'Business Questionnaire - FormaChat');
 
     this.protectedRoute('/dashboard/businesses/:id/products', async () => {
       const params = this.getParams();
       const content = await renderProductsPage(params.id);
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
-    });
+    }, 'Products - FormaChat');
 
     this.protectedRoute('/dashboard/businesses/:id/documents', async () => {
       const params = this.getParams();
       const content = await renderDocumentsPage(params.id);
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
-    });
+    }, 'Documents - FormaChat');
 
     this.protectedRoute('/dashboard/channels', async () => {
       const content = await renderChannelsIndex();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
-    });
+    }, 'Channels - FormaChat');
 
     this.protectedRoute('/dashboard/channels/:id', async () => {
         const params = this.getParams();
         const content = await renderChannelsDetail(params.id);
         const layout = await renderDashboardLayout(content);
         renderTo(appRoot, layout);
-    });
+    }, 'Channel Settings - FormaChat');
 
     this.protectedRoute('/dashboard/analytics', async () => {
       const content = await renderAnalyticsIndex();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
-    });
+    }, 'Analytics - FormaChat');
 
     this.protectedRoute('/dashboard/analytics/:id', async () => {
       const params = this.getParams();
       const content = await renderAnalyticsDetail(params.id);
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
-    });
+    }, 'Analytics - FormaChat');
   }
 
   public getParams(): Record<string, string> {
