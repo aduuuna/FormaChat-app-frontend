@@ -17,6 +17,62 @@ function shadeColor(hex: string, percent: number): string {
   return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
 }
 
+/**
+ * Talk to widget.js (the launcher script running on the host page). No-op
+ * when not actually embedded in an iframe (standalone preview/testing), so
+ * every call site can fire this unconditionally without checking embed mode
+ * itself. widget.js listens for `source: 'formachat-widget'` messages -
+ * see public/widget.js's `window.addEventListener('message', ...)`.
+ */
+function notifyParent(type: 'ready' | 'message' | 'close', payload: Record<string, any> = {}): void {
+  if (window.parent === window) return;
+  window.parent.postMessage({ source: 'formachat-widget', type, ...payload }, '*');
+}
+
+/**
+ * Minimal, safe markdown-ish formatting for bot messages. HTML-escapes the
+ * raw text FIRST, then layers on a small allowlist of tags (bold, italic,
+ * links restricted to http(s) URLs, bullet lists, paragraphs) - so even if
+ * the LLM's output contains literal HTML/script-looking text (whether from
+ * the model itself or echoed back from a prompt-injection attempt in the
+ * user's message), it can never end up as live markup. Only the tags this
+ * function explicitly constructs ever reach innerHTML.
+ */
+function renderMarkdownLite(text: string): string {
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const inline = (s: string) =>
+    escapeHtml(s)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+  const lines = text.split('\n');
+  let html = '';
+  let inList = false;
+
+  for (const line of lines) {
+    const bulletMatch = line.match(/^\s*[-*]\s+(.+)/);
+    if (bulletMatch) {
+      if (!inList) { html += '<ul class="msg-list">'; inList = true; }
+      html += `<li>${inline(bulletMatch[1])}</li>`;
+      continue;
+    }
+    if (inList) { html += '</ul>'; inList = false; }
+
+    if (line.trim() === '') continue;
+    html += `<p class="msg-para">${inline(line)}</p>`;
+  }
+  if (inList) html += '</ul>';
+
+  return html || escapeHtml(text);
+}
+
+function formatTimestamp(date: Date): string {
+  return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
 function injectWidgetStyles() {
   if (document.getElementById('chat-widget-styles')) return;
 
@@ -34,6 +90,7 @@ function injectWidgetStyles() {
       --white: #ffffff;
       --text-main: #1a1a1a;
       --text-light: #ffffff;
+      --text-muted: #6b7280;
       --shadow-soft: 0 4px 20px rgba(0,0,0,0.08);
     }
 
@@ -72,9 +129,31 @@ function injectWidgetStyles() {
       display: flex;
       flex-direction: column;
       width: 100%;
-      height: 100%; 
+      height: 100%;
       background: var(--white);
       overflow: hidden;
+    }
+
+    .chat-ui.standalone-ui {
+      max-width: 480px;
+      height: 700px;
+      border: 1px solid #4a5122;
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+    }
+
+    .chat-ui.embed-ui {
+      height: 100%;
+      border: 1px solid #4a5122;
+      border-radius: 20px;
+    }
+
+    /* Below ~480px, widget.js switches the iframe itself to a full-screen
+       takeover (no floating card look makes sense there) - drop the
+       border/radius so the chat fills the screen edge-to-edge instead of
+       looking like an inset card with dead space around it. */
+    @media (max-width: 480px) {
+      .chat-ui.embed-ui { border: none; border-radius: 0; }
     }
 
     /* ... REST OF YOUR CSS (Header, Messages, etc.) STAYS THE SAME ... */
@@ -112,24 +191,38 @@ function injectWidgetStyles() {
     
     /* ... KEEP THE REST OF YOUR CSS AS IS ... */
     /* (The rest of your CSS was fine, just ensure you keep the parts below input-area) */
-    .header-info { display: flex; align-items: center; gap: 12px; }
-    .bot-avatar { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid rgba(255,255,255,0.3); }
-    .bot-details h3 { margin: 0; font-size: 16px; font-weight: 600; }
+    .header-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .bot-avatar { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid rgba(255,255,255,0.3); flex-shrink: 0; }
+    .bot-details { min-width: 0; }
+    .bot-details h3 { margin: 0; font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .bot-status { font-size: 12px; opacity: 0.9; display: flex; align-items: center; gap: 4px; }
     .status-dot { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; display: inline-block; }
-    .btn-end-chat { background: #dc2626; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .btn-end-chat { background: #dc2626; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
     .btn-end-chat:hover {
       color: white;
       background: #b91c1c;
       transform: translateY(-1px); }
     .btn-end-chat:disabled { opacity: 0.5; cursor: default; }
+    .btn-widget-close { width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+    .btn-widget-close:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
     .chat-messages::-webkit-scrollbar { width: 6px; }
     .chat-messages::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-    .message-bubble { max-width: 80%; padding: 12px 16px; margin-bottom: 12px; position: relative; font-size: 15px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); animation: popIn 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); word-wrap: break-word; }
+    .message-row { display: flex; flex-direction: column; max-width: 80%; margin-bottom: 12px; }
+    .message-row.row-user { align-self: flex-end; align-items: flex-end; }
+    .message-row.row-bot { align-self: flex-start; align-items: flex-start; }
+    .message-bubble { padding: 12px 16px; position: relative; font-size: 15px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); animation: popIn 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); word-wrap: break-word; max-width: 100%; }
     @keyframes popIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .message-bot { align-self: flex-start; background: var(--white); color: var(--text-main); border-radius: 18px 18px 18px 2px; border: 1px solid #e5e7eb; margin-right: auto; }
-    .message-user { align-self: flex-end; background: var(--primary); color: var(--white); border-radius: 18px 18px 2px 18px; margin-left: auto; box-shadow: 0 4px 10px rgba(99, 107, 47, 0.2); }
+    .message-bot { background: var(--white); color: var(--text-main); border-radius: 18px 18px 18px 2px; border: 1px solid #e5e7eb; }
+    .message-user { background: var(--primary); color: var(--white); border-radius: 18px 18px 2px 18px; box-shadow: 0 4px 10px rgba(99, 107, 47, 0.2); }
     .message-system { align-self: center; background: rgba(0,0,0,0.05); color: var(--text-muted); border-radius: 12px; font-size: 13px; padding: 6px 12px; box-shadow: none; margin: 10px auto; text-align: center; }
+    .message-timestamp { font-size: 11px; color: var(--text-muted); margin-top: 4px; padding: 0 4px; }
+    .msg-para { margin: 0 0 6px; }
+    .msg-para:last-child { margin-bottom: 0; }
+    .msg-list { margin: 0 0 6px; padding-left: 18px; }
+    .msg-list:last-child { margin-bottom: 0; }
+    .message-bot a { color: var(--primary); font-weight: 600; }
+    .message-user .msg-para, .message-user .msg-list { color: var(--white); }
     .product-cards-wrapper { display: flex; flex-direction: column; gap: 8px; max-width: 80%; align-self: flex-start; margin: -4px 0 12px; }
     .product-chat-card { display: flex; gap: 10px; background: var(--white); border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05); animation: popIn 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
     .product-chat-card-image { width: 64px; height: 64px; object-fit: cover; flex-shrink: 0; }
@@ -155,6 +248,18 @@ function injectWidgetStyles() {
     .status-icon { font-size: 48px; margin-bottom: 15px; }
     .status-title { font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; }
     .status-msg { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+
+    .widget-branding { text-align: center; padding: 6px 0 10px; flex-shrink: 0; background: var(--white); }
+    .widget-branding a { font-size: 11px; color: var(--text-muted); text-decoration: none; font-weight: 600; opacity: 0.7; transition: opacity 0.2s; }
+    .widget-branding a:hover { opacity: 1; }
+
+    /* Mobile: widen bubbles a little since screen real estate is already
+       tight, and give the header's End Chat button a bit less room so the
+       close (X) button never gets crowded off - both live in header-actions. */
+    @media (max-width: 480px) {
+      .message-row { max-width: 88%; }
+      .btn-end-chat { padding: 6px 10px; font-size: 11px; }
+    }
   `;
   document.head.appendChild(style);
 }
@@ -187,6 +292,19 @@ export async function renderChatWidget(businessId: string, embedMode: boolean = 
       container.style.setProperty('--primary', primaryColor);
       container.style.setProperty('--primary-dark', shadeColor(primaryColor, -15));
     }
+
+    // widget.js (the launcher on the host page) can't call the API directly
+    // - CORS only allows FormaChat's own origins, not arbitrary embedding
+    // sites - so the iframe (which CAN fetch, since it's same-origin with
+    // the API) is the only place this config exists. Hand it over via
+    // postMessage so the launcher button (color, position) matches what the
+    // owner actually configured in the dashboard instead of always falling
+    // back to the embed snippet's hardcoded defaults.
+    notifyParent('ready', {
+      primaryColor: primaryColor || null,
+      avatarUrl: (business as any).widgetConfig?.avatarUrl || null,
+      position: (business as any).widgetConfig?.position || null,
+    });
 
     if (!business.isActive || business.freezeInfo?.isFrozen) {
       container.removeChild(loadingDiv);
@@ -241,22 +359,9 @@ function createChatUI(
   isEmbedMode: boolean
 ): HTMLElement {
   const chatContainer = document.createElement('div');
-  chatContainer.className = 'chat-ui';
-  
-  if (!isEmbedMode) {
-    chatContainer.style.maxWidth = '480px'; 
-    chatContainer.style.height = '700px';
-    chatContainer.style.border = '1px solid #4a5122';
-    chatContainer.style.borderRadius = '20px';
-    chatContainer.style.boxShadow = '0 20px 50px rgba(0,0,0,0.15)';
-  } else {
-    chatContainer.style.height = '100%';
-    chatContainer.style.borderRadius = '0';
-    chatContainer.style.border = '1px solid #4a5122';
-    chatContainer.style.borderRadius = '20px';
-  }
+  chatContainer.className = isEmbedMode ? 'chat-ui embed-ui' : 'chat-ui standalone-ui';
 
-  const header = createChatHeader(business, session.sessionId);
+  const header = createChatHeader(business, session.sessionId, isEmbedMode);
   chatContainer.appendChild(header);
 
   const messagesContainer = document.createElement('div');
@@ -264,17 +369,22 @@ function createChatUI(
   messagesContainer.id = 'chat-messages';
   chatContainer.appendChild(messagesContainer);
 
-  const greeting = session.businessInfo?.chatbotGreeting || 
+  const greeting = session.businessInfo?.chatbotGreeting ||
     `Hi! Welcome to ${business.basicInfo.businessName}. How can I help you today?`;
   addMessageToUI(messagesContainer, greeting, 'bot');
 
   const inputArea = createInputArea(session.sessionId, messagesContainer);
   chatContainer.appendChild(inputArea);
 
+  const branding = document.createElement('div');
+  branding.className = 'widget-branding';
+  branding.innerHTML = `<a href="https://www.formachat.com" target="_blank" rel="noopener noreferrer">⚡ Powered by FormaChat</a>`;
+  chatContainer.appendChild(branding);
+
   return chatContainer;
 }
 
-function createChatHeader(business: any, sessionId: string): HTMLElement {
+function createChatHeader(business: any, sessionId: string, isEmbedMode: boolean): HTMLElement {
   const header = document.createElement('div');
   header.className = 'chat-header';
 
@@ -373,7 +483,20 @@ function createChatHeader(business: any, sessionId: string): HTMLElement {
     };
   });
 
-  header.appendChild(endButton);
+  const actions = document.createElement('div');
+  actions.className = 'header-actions';
+  actions.appendChild(endButton);
+
+  if (isEmbedMode) {
+    const closeButton = document.createElement('button');
+    closeButton.className = 'btn-widget-close';
+    closeButton.setAttribute('aria-label', 'Close chat');
+    closeButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    closeButton.addEventListener('click', () => notifyParent('close'));
+    actions.appendChild(closeButton);
+  }
+
+  header.appendChild(actions);
 
   return header;
 }
@@ -449,11 +572,45 @@ function createInputArea(sessionId: string, messagesContainer: HTMLElement): HTM
 }
 
 function addMessageToUI(container: HTMLElement, text: string, type: 'user' | 'bot' | 'system'): void {
+  if (type === 'system') {
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble message-system';
+    bubble.textContent = text;
+    container.appendChild(bubble);
+    scrollToBottom(container);
+    return;
+  }
+
+  const row = document.createElement('div');
+  row.className = `message-row row-${type}`;
+
   const bubble = document.createElement('div');
   bubble.className = `message-bubble message-${type}`;
-  bubble.textContent = text;
-  container.appendChild(bubble);
+  if (type === 'bot') {
+    // Bot text only - renderMarkdownLite HTML-escapes everything before
+    // adding its own small set of tags, so this is safe even though the
+    // text ultimately traces back to an LLM response.
+    bubble.innerHTML = renderMarkdownLite(text);
+  } else {
+    bubble.textContent = text;
+  }
+  row.appendChild(bubble);
+
+  const timestamp = document.createElement('div');
+  timestamp.className = 'message-timestamp';
+  timestamp.textContent = formatTimestamp(new Date());
+  row.appendChild(timestamp);
+
+  container.appendChild(row);
   scrollToBottom(container);
+
+  if (type === 'bot') {
+    // Let widget.js show an unread badge if the widget is currently closed
+    // - the iframe has no way to know its own visible/hidden state from in
+    // here (that's controlled by the parent page's CSS), so it just always
+    // reports new bot messages and lets the parent decide.
+    notifyParent('message', { role: 'bot' });
+  }
 }
 
 function addProductCardsToUI(container: HTMLElement, products: ChatProduct[]): void {
