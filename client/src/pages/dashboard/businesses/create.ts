@@ -1,6 +1,8 @@
 import { createBreadcrumb } from '../../../components/breadcrumb';
-import { createBusiness } from '../../../services/business.service';
+import { createBusiness, prefillBusiness } from '../../../services/business.service';
+import type { PrefillResult } from '../../../services/business.service';
 import type { CreateBusinessRequest } from '../../../types/business.types';
+import { showToast } from '../../../utils/toast';
 
 function injectWizardStyles() {
   if (document.getElementById('business-wizard-styles')) return;
@@ -354,6 +356,76 @@ function injectWizardStyles() {
       margin-bottom: 20px;
       font-weight: 500;
     }
+
+    /* --- 8. QUICK START (AI PRE-FILL) --- */
+    .quickstart-intro {
+      color: var(--text-muted);
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .quickstart-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .quickstart-divider::before,
+    .quickstart-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+    .quickstart-upload-zone {
+      border: 2px dashed var(--secondary);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      background: rgba(255,255,255,0.5);
+      margin-bottom: 20px;
+    }
+    .quickstart-upload-zone p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin: 8px 0 0;
+    }
+    .quickstart-filename {
+      font-weight: 600;
+      color: var(--primary);
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+    .quickstart-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+    .btn-quickstart-skip {
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      text-decoration: underline;
+      padding: 14px 10px;
+    }
+    .quickstart-summary {
+      background: rgba(5, 150, 105, 0.08);
+      border: 1px solid rgba(5, 150, 105, 0.3);
+      color: var(--success-green);
+      padding: 14px 18px;
+      border-radius: 12px;
+      margin-top: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: none;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -373,23 +445,25 @@ export async function renderBusinessCreate(): Promise<HTMLElement> {
   const wizardContainer = document.createElement('div');
   wizardContainer.className = 'wizard-container';
   
-  const progressDots = createProgressDots(4);
+  const progressDots = createProgressDots(5);
   wizardContainer.appendChild(progressDots);
-  
+
   const stepCounter = document.createElement('div');
   stepCounter.className = 'step-counter';
-  stepCounter.textContent = 'Step 1 of 4';
+  stepCounter.textContent = 'Step 1 of 5';
   wizardContainer.appendChild(stepCounter);
-  
- 
+
+
   const form = document.createElement('form');
   form.className = 'business-form';
-  
+
   const section1 = createSection1();
   const section2 = createSection2();
   const section3 = createSection3();
   const section4 = createSection4();
-  
+  const section0 = createSection0({ section1, section2, section3, section4 });
+
+  form.appendChild(section0);
   form.appendChild(section1);
   form.appendChild(section2);
   form.appendChild(section3);
@@ -535,6 +609,169 @@ function initializeWizard(
   });
 }
 
+function createSection0(otherSections: { section1: HTMLElement; section2: HTMLElement; section3: HTMLElement; section4: HTMLElement }): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'form-section';
+
+  const title = document.createElement('h2');
+  title.textContent = 'Quick Start';
+  section.appendChild(title);
+
+  const intro = document.createElement('p');
+  intro.className = 'quickstart-intro';
+  intro.textContent = "Paste your website copy or a brochure, or upload a PDF/Word document (menu, catalog, FAQ sheet - whatever you've already got). We'll draft your business description, offerings, and FAQs so you're editing instead of starting from a blank page. Totally optional - skip it and fill everything in yourself if you'd rather.";
+  section.appendChild(intro);
+
+  const textareaField = createFormField({
+    type: 'textarea',
+    name: 'quickstartText',
+    label: 'Paste text about your business (optional)',
+    placeholder: 'Paste your website\'s About page, a product description, anything...',
+  });
+  (textareaField.querySelector('textarea') as HTMLTextAreaElement).rows = 6;
+  section.appendChild(textareaField);
+
+  const divider = document.createElement('div');
+  divider.className = 'quickstart-divider';
+  divider.textContent = 'and / or';
+  section.appendChild(divider);
+
+  const uploadZone = document.createElement('div');
+  uploadZone.className = 'quickstart-upload-zone';
+  const uploadBtn = document.createElement('button');
+  uploadBtn.type = 'button';
+  uploadBtn.className = 'btn-secondary';
+  uploadBtn.textContent = '📄 Upload a Document';
+  uploadZone.appendChild(uploadBtn);
+  const uploadHint = document.createElement('p');
+  uploadHint.textContent = 'PDF or Word (.docx), up to 15MB';
+  uploadZone.appendChild(uploadHint);
+  const filenameDisplay = document.createElement('p');
+  filenameDisplay.className = 'quickstart-filename';
+  filenameDisplay.style.display = 'none';
+  uploadZone.appendChild(filenameDisplay);
+  section.appendChild(uploadZone);
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  fileInput.style.display = 'none';
+  section.appendChild(fileInput);
+
+  let selectedFile: File | undefined;
+  uploadBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    selectedFile = fileInput.files?.[0];
+    if (selectedFile) {
+      filenameDisplay.textContent = `Selected: ${selectedFile.name}`;
+      filenameDisplay.style.display = 'block';
+    }
+  });
+
+  const summary = document.createElement('div');
+  summary.className = 'quickstart-summary';
+  section.appendChild(summary);
+
+  const actions = document.createElement('div');
+  actions.className = 'quickstart-actions';
+
+  const generateBtn = document.createElement('button');
+  generateBtn.type = 'button';
+  generateBtn.className = 'btn-nav btn-next';
+  generateBtn.textContent = '✨ Generate Suggestions';
+  actions.appendChild(generateBtn);
+
+  const skipBtn = document.createElement('button');
+  skipBtn.type = 'button';
+  skipBtn.className = 'btn-quickstart-skip';
+  skipBtn.textContent = "Skip - I'll fill it in myself";
+  actions.appendChild(skipBtn);
+
+  section.appendChild(actions);
+
+  generateBtn.addEventListener('click', async () => {
+    const rawText = (textareaField.querySelector('textarea') as HTMLTextAreaElement).value.trim();
+
+    if (!rawText && !selectedFile) {
+      showToast('Paste some text or upload a document first.', 'error');
+      return;
+    }
+
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generating...';
+    summary.style.display = 'none';
+
+    try {
+      const result = await prefillBusiness({ rawText: rawText || undefined, file: selectedFile });
+      applyPrefillResult(result, otherSections);
+
+      const filledCount = Object.keys(result).length;
+      summary.textContent = filledCount > 0
+        ? `✓ Applied suggestions to ${filledCount} field${filledCount === 1 ? '' : 's'} - review and edit them in the next steps.`
+        : "Didn't find enough detail to suggest anything - no worries, just fill in the next steps yourself.";
+      summary.style.display = 'block';
+      showToast('Suggestions ready - review them as you go through the next steps.', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to generate suggestions.', 'error');
+    } finally {
+      generateBtn.disabled = false;
+      generateBtn.textContent = '✨ Generate Suggestions';
+    }
+  });
+
+  skipBtn.addEventListener('click', () => {
+    const nextBtn = document.querySelector('.btn-next') as HTMLButtonElement;
+    nextBtn?.click();
+  });
+
+  return section;
+}
+
+/**
+ * Populate the wizard's own fields (steps 1-4) with AI-drafted suggestions.
+ * Values are set programmatically then an 'input' event is dispatched so
+ * existing listeners (character counters) pick up the new length.
+ */
+function applyPrefillResult(
+  result: PrefillResult,
+  sections: { section1: HTMLElement; section2: HTMLElement; section3: HTMLElement; section4: HTMLElement }
+): void {
+  const setValue = (root: HTMLElement, name: string, value: string) => {
+    const field = root.querySelector(`[name="${name}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+    if (!field || !value) return;
+    field.value = value;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  if (result.businessDescription) setValue(sections.section1, 'businessDescription', result.businessDescription);
+  if (result.businessType) setValue(sections.section1, 'businessType', result.businessType);
+
+  if (result.offerings) setValue(sections.section2, 'offerings', result.offerings);
+
+  // Note: popularItems is intentionally not applied here anymore - individual
+  // products (with photos/price/stock) live in the dedicated Products tab now,
+  // not as a free-text array in the questionnaire. See handleCreateBusiness's
+  // post-create redirect, which sends the owner straight to that tab.
+
+  if (result.refundPolicy) setValue(sections.section3, 'refundPolicy', result.refundPolicy);
+  if (result.chatbotTone) setValue(sections.section3, 'chatbotTone', result.chatbotTone);
+
+  if (result.faqs && result.faqs.length > 0) {
+    const addBtn = sections.section3.querySelector('.dynamic-array-section .btn-secondary') as HTMLButtonElement;
+    const itemsContainer = sections.section3.querySelector('.dynamic-array-items') as HTMLElement;
+    result.faqs.forEach(faq => {
+      addBtn?.click();
+      const lastItem = itemsContainer?.lastElementChild as HTMLElement;
+      if (!lastItem) return;
+      const questionInput = lastItem.querySelector('[name$="[question]"]') as HTMLInputElement;
+      const answerInput = lastItem.querySelector('[name$="[answer]"]') as HTMLTextAreaElement;
+      if (questionInput) questionInput.value = faq.question;
+      if (answerInput) answerInput.value = faq.answer;
+    });
+  }
+}
+
 function createSection1(): HTMLElement {
   const section = document.createElement('section');
   section.className = 'form-section';
@@ -641,21 +878,9 @@ function createSection2(): HTMLElement {
     required: true,
     maxLength: 1000,
     placeholder: 'Describe your products or services...',
-    helpText: 'Detailed description of your offerings'
+    helpText: 'Detailed description of your offerings - for individual products with photos, prices, and stock, use the Products tab after creating your business'
   }));
-  
 
-  section.appendChild(createDynamicArraySection({
-    title: 'Popular Items (Optional)',
-    name: 'popularItems',
-    fields: [
-      { type: 'text', name: 'name', label: 'Item Name', required: true },
-      { type: 'textarea', name: 'description', label: 'Description', required: false },
-      { type: 'number', name: 'price', label: 'Price', required: false, placeholder: '0.00' }
-    ],
-    helpText: 'Add your most popular products or services'
-  }));
-  
   section.appendChild(createCheckboxGroup({
     name: 'serviceDelivery',
     label: 'Service Delivery Options',
@@ -1245,7 +1470,7 @@ async function handleCreateBusiness(
       },
       productsServices: {
         offerings: formData.get('offerings') as string,
-        popularItems: collectArrayData(form, 'popularItems'),
+        popularItems: [], // individual products now live in the Products tab, not this free-text list
         serviceDelivery: formData.getAll('serviceDelivery') as any[],
         pricingDisplay: {
           canDiscussPricing: formData.get('canDiscussPricing') === 'on',
@@ -1276,9 +1501,11 @@ async function handleCreateBusiness(
       }
     };
     
-    await createBusiness(businessData);
-    window.location.hash = '#/dashboard/businesses';
-    
+    const created = await createBusiness(businessData);
+    showToast('Business created! Now add your products.', 'success');
+    window.location.hash = `#/dashboard/businesses/${created._id}/products`;
+
+
   } catch (error: any) {
     errorContainer.textContent = error.message || 'Failed to create business';
     errorContainer.style.display = 'block';

@@ -545,18 +545,8 @@ function createEditForm(business: Business): HTMLFormElement {
   const s2 = createSection('2. Products & Services');
   
   s2.appendChild(createFormField({
-    type: 'textarea', name: 'offerings', label: 'What do you offer?', required: true,
+    type: 'textarea', name: 'offerings', label: 'What do you offer? (for individual products with photos/price/stock, use the Products tab above)', required: true,
     value: business.productsServices.offerings
-  }));
-
-  s2.appendChild(createDynamicArraySection({
-    title: 'Popular Items', name: 'popularItems',
-    fields: [
-        { type: 'text', name: 'name', label: 'Name', required: true },
-        { type: 'textarea', name: 'description', label: 'Description' },
-        { type: 'number', name: 'price', label: 'Price' }
-    ],
-    existingData: business.productsServices.popularItems
   }));
 
   s2.appendChild(createCheckboxGroup({
@@ -937,7 +927,7 @@ async function handleUpdateBusiness(
         },
         productsServices: {
             offerings: formData.get('offerings') as string,
-            popularItems: collectArrayData(form, 'popularItems'),
+            popularItems: [], // individual products now live in the Products tab, not this free-text list
             serviceDelivery: formData.getAll('serviceDelivery') as any[],
             pricingDisplay: {
                 canDiscussPricing: !!formData.get('canDiscussPricing'),

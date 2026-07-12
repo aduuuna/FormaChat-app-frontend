@@ -1,4 +1,5 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api.utils';
+import { getAccessToken } from '../utils/auth.utils';
 import { BUSINESS_ENDPOINTS } from '../config/api.config';
 import type {
   Business,
@@ -221,6 +222,38 @@ export const listWebhookDeliveries = async (businessId: string, webhookId: strin
 export const retryWebhookDelivery = async (businessId: string, deliveryId: string): Promise<void> => {
   const response: ApiResponse<{ message: string }> = await apiPost(BUSINESS_ENDPOINTS.WEBHOOK_DELIVERY_RETRY(businessId, deliveryId), {});
   if (!response.success) throw new Error((response as any).error?.message || 'Failed to retry delivery');
+};
+
+export interface PrefillResult {
+  businessDescription?: string;
+  businessType?: string;
+  offerings?: string;
+  popularItems?: Array<{ name: string; description?: string; price?: number }>;
+  faqs?: Array<{ question: string; answer: string }>;
+  refundPolicy?: string;
+  chatbotTone?: string;
+}
+
+/**
+ * Raw fetch, not the shared apiFetch helper - same reasoning as the image/
+ * document upload functions: apiFetch hardcodes Content-Type: application/json,
+ * which breaks a multipart request.
+ */
+export const prefillBusiness = async (input: { rawText?: string; file?: File }): Promise<PrefillResult> => {
+  const formData = new FormData();
+  if (input.rawText) formData.append('rawText', input.rawText);
+  if (input.file) formData.append('document', input.file);
+
+  const accessToken = getAccessToken();
+  const res = await fetch(BUSINESS_ENDPOINTS.PREFILL, {
+    method: 'POST',
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    body: formData,
+  });
+
+  const data: ApiResponse<PrefillResult> = await res.json();
+  if (!data.success) throw new Error((data as any).error?.message || 'Failed to generate suggestions');
+  return data.data;
 };
 
 export default {

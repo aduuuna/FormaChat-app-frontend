@@ -43,6 +43,7 @@ export const AUTH_ENDPOINTS = {
 
 export const BUSINESS_ENDPOINTS = {
   CREATE: `${API_BASE_URLS.BUSINESS}/businesses`,
+  PREFILL: `${API_BASE_URLS.BUSINESS}/businesses/prefill`,
   LIST: `${API_BASE_URLS.BUSINESS}/businesses`,
   DETAILS: (id: string) => `${API_BASE_URLS.BUSINESS}/businesses/${id}`,
   UPDATE: (id: string) => `${API_BASE_URLS.BUSINESS}/businesses/${id}`,
