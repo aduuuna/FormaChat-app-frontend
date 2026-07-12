@@ -96,19 +96,32 @@
       // Quiet watermark text, shown only while the widget is open (see
       // open()/close()) - inline with the button, pinned to the far edge of
       // the popup above it (see getBrandingTagStyles for the anchor logic).
-      this.brandingTag = document.createElement('a');
+      //
+      // Split into two elements on purpose: brandingTag is a wide
+      // positioning box (up to 400px, spanning toward the button) with
+      // pointer-events:none, so it never intercepts clicks - only
+      // brandingLink, sized to just its own text via inline-block, is
+      // actually clickable. Without this split, the wide box (even the
+      // invisible part where no text renders) sat on top of the launcher
+      // button and stole its clicks, so tapping "close" opened
+      // formachat.com instead of closing the widget.
+      this.brandingTag = document.createElement('div');
       this.brandingTag.id = 'formachat-branding-tag';
-      this.brandingTag.href = 'https://www.formachat.com';
-      this.brandingTag.target = '_blank';
-      this.brandingTag.rel = 'noopener noreferrer';
-      this.brandingTag.textContent = 'Powered by FormaChat';
       this.brandingTag.style.cssText = this.getBrandingTagStyles();
-      this.brandingTag.addEventListener('mouseenter', function() {
+
+      var brandingLink = document.createElement('a');
+      brandingLink.href = 'https://www.formachat.com';
+      brandingLink.target = '_blank';
+      brandingLink.rel = 'noopener noreferrer';
+      brandingLink.textContent = 'Powered by FormaChat';
+      brandingLink.style.cssText = 'display:inline-block; pointer-events:auto; color:inherit; text-decoration:none;';
+      brandingLink.addEventListener('mouseenter', function() {
         FormachatWidget.brandingTag.style.opacity = '1';
       });
-      this.brandingTag.addEventListener('mouseleave', function() {
+      brandingLink.addEventListener('mouseleave', function() {
         if (FormachatWidget.isOpen) FormachatWidget.brandingTag.style.opacity = '0.7';
       });
+      this.brandingTag.appendChild(brandingLink);
 
       this.container.appendChild(this.iframe);
       this.container.appendChild(this.button);
@@ -266,9 +279,11 @@
       // Quiet watermark text, inline with the button, only while open -
       // pairs with the button showing its X (closed) icon. Deliberately
       // subtle (0.7 opacity, no background) rather than a second button -
-      // present if you look, not fighting for attention.
+      // present if you look, not fighting for attention. The wrapper itself
+      // stays pointer-events:none always (see getBrandingTagStyles) - only
+      // the inner link element is clickable, so this wide box can never
+      // steal clicks meant for the button next to it.
       this.brandingTag.style.display = 'block';
-      this.brandingTag.style.pointerEvents = 'auto';
       requestAnimationFrame(function() {
         setTimeout(function() {
           FormachatWidget.brandingTag.style.opacity = '0.7';
