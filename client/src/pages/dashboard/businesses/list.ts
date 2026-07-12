@@ -85,14 +85,26 @@ function injectListStyles() {
     .card-actions {
       display: flex;
       justify-content: flex-end;
+      flex-wrap: wrap;
       padding: 10px 20px 10px 10px; /* Padding for visual separation */
       border-top: 1px solid rgba(0, 0, 0, 0.05);
       background: rgba(255, 255, 255, 0.5); /* Extend the glass feel */
       border-bottom-left-radius: 12px;
       border-bottom-right-radius: 12px;
-      
+
       /* CRITICAL FIX: Space between buttons */
-      gap: 10px; 
+      gap: 8px;
+    }
+
+    @media (max-width: 420px) {
+      .card-actions {
+        justify-content: stretch;
+      }
+      .card-actions button {
+        flex: 1;
+        padding: 8px 6px;
+        font-size: 0.82rem;
+      }
     }
 
     /* Action Button Base Style */
@@ -245,15 +257,25 @@ function createBusinessCardWithActions(business: any): HTMLElement {
   
 
   const editBtn = document.createElement('button');
-  editBtn.textContent = 'Edit';
+  editBtn.textContent = 'Questionnaire';
   editBtn.type = 'button'
   editBtn.className = 'btn-secondary';
   editBtn.addEventListener('click', (e) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     window.location.hash = `#/dashboard/businesses/${business._id}/edit`;
   });
   actions.appendChild(editBtn);
-  
+
+  const productsBtn = document.createElement('button');
+  productsBtn.textContent = 'Products';
+  productsBtn.type = 'button';
+  productsBtn.className = 'btn-secondary';
+  productsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.location.hash = `#/dashboard/businesses/${business._id}/products`;
+  });
+  actions.appendChild(productsBtn);
+
   const deleteBtn = document.createElement('button');
   deleteBtn.textContent = 'Delete';
   deleteBtn.type = 'button';
