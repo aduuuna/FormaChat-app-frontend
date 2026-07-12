@@ -93,11 +93,9 @@
       this.iframe.setAttribute('frameborder', '0');
       this.iframe.setAttribute('allow', 'clipboard-write');
 
-      // Small colored pill, shown only while the widget is open (see
-      // open()/close()) - sits directly below the button in the container's
-      // own flex-column layout (the iframe is position:absolute so it
-      // doesn't participate in that flow; only the button and this tag do,
-      // which is what makes "directly below the button" work for free).
+      // Quiet watermark text, shown only while the widget is open (see
+      // open()/close()) - inline with the button, pinned to the far edge of
+      // the popup above it (see getBrandingTagStyles for the anchor logic).
       this.brandingTag = document.createElement('a');
       this.brandingTag.id = 'formachat-branding-tag';
       this.brandingTag.href = 'https://www.formachat.com';
@@ -105,6 +103,12 @@
       this.brandingTag.rel = 'noopener noreferrer';
       this.brandingTag.textContent = 'Powered by FormaChat';
       this.brandingTag.style.cssText = this.getBrandingTagStyles();
+      this.brandingTag.addEventListener('mouseenter', function() {
+        FormachatWidget.brandingTag.style.opacity = '1';
+      });
+      this.brandingTag.addEventListener('mouseleave', function() {
+        if (FormachatWidget.isOpen) FormachatWidget.brandingTag.style.opacity = '0.7';
+      });
 
       this.container.appendChild(this.iframe);
       this.container.appendChild(this.button);
@@ -139,15 +143,18 @@
           this.config.primaryColor = data.primaryColor;
           this.button.style.background = data.primaryColor;
           this.button.style.boxShadow = this.getButtonShadow();
-          this.brandingTag.style.background = data.primaryColor;
+          this.brandingTag.style.color = data.primaryColor;
         }
         if (data.position && data.position !== this.config.position) {
-          // Re-anchors the whole container (button + iframe + bubble) to
-          // the owner-configured side - previously this field was saved in
-          // the dashboard but never actually reached the launcher script,
-          // so it silently did nothing.
+          // Re-anchors the container, and re-derives the branding tag's own
+          // anchor/alignment (getIframeStyles recomputes anchorLeft fresh on
+          // every open()/close()/resize call, so it doesn't need a push here -
+          // but the tag's position was baked in once at creation and needs an
+          // explicit refresh). 'ready' fires before the widget's first open,
+          // so the tag is still hidden at this point - safe to fully reset it.
           this.config.position = data.position;
           this.container.style.cssText = this.getContainerStyles();
+          this.brandingTag.style.cssText = this.getBrandingTagStyles();
         }
       } else if (data.type === 'message' && data.role === 'bot') {
         if (!this.isOpen) {
@@ -256,14 +263,15 @@
       this.button.style.opacity = '1';
       this.button.style.pointerEvents = 'auto';
 
-      // Branding pill appears directly below the button, only while open -
-      // pairs with the button showing its X (closed) icon.
-      this.brandingTag.style.display = 'inline-flex';
+      // Quiet watermark text, inline with the button, only while open -
+      // pairs with the button showing its X (closed) icon. Deliberately
+      // subtle (0.7 opacity, no background) rather than a second button -
+      // present if you look, not fighting for attention.
+      this.brandingTag.style.display = 'block';
       this.brandingTag.style.pointerEvents = 'auto';
       requestAnimationFrame(function() {
         setTimeout(function() {
-          FormachatWidget.brandingTag.style.opacity = '1';
-          FormachatWidget.brandingTag.style.transform = 'translateY(0)';
+          FormachatWidget.brandingTag.style.opacity = '0.7';
         }, 30);
       });
     },
@@ -279,7 +287,6 @@
       this.button.style.boxShadow = this.getButtonShadow();
 
       this.brandingTag.style.opacity = '0';
-      this.brandingTag.style.transform = 'translateY(-6px)';
       this.brandingTag.style.pointerEvents = 'none';
       setTimeout(function() {
         if (!FormachatWidget.isOpen) FormachatWidget.brandingTag.style.display = 'none';
@@ -294,12 +301,6 @@
       var position = this.config.position;
       var right = position.indexOf('right') !== -1 ? '20px' : 'auto';
       var left = position.indexOf('left') !== -1 ? '20px' : 'auto';
-      // The iframe is position:absolute (doesn't participate in this flow),
-      // so button + brandingTag are the only real flex children - stacking
-      // them in a column with the tag appended after the button is what
-      // puts the tag directly below the button, aligned to whichever side
-      // the widget lives on.
-      var alignItems = position.indexOf('left') !== -1 ? 'flex-start' : 'flex-end';
 
       return [
         'position: fixed',
@@ -307,10 +308,6 @@
         'right: ' + right,
         'left: ' + left,
         'z-index: 999999',
-        'display: flex',
-        'flex-direction: column',
-        'align-items: ' + alignItems,
-        'gap: 8px',
         "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
       ].join(';');
     },
@@ -356,21 +353,31 @@
     },
 
     getBrandingTagStyles: function() {
+      // Mirrors getIframeStyles()'s own anchor/width exactly, so the tag's
+      // far edge lines up with the popup's far edge above it instead of
+      // needing a separate hardcoded width that could drift out of sync.
+      // No background/pill - just colored text (the header/business color),
+      // right- or left-aligned within that same span depending on which
+      // side is "far" from the button, so it reads as a quiet watermark
+      // rather than a second button.
+      var anchorLeft = this.config.position.indexOf('left') !== -1;
+
       return [
         'display: none',
-        'align-items: center',
-        'background: ' + this.config.primaryColor,
-        'color: white',
-        'font-size: 11px',
+        'position: absolute',
+        'bottom: 22px',
+        anchorLeft ? 'left: 0' : 'right: 0',
+        'width: min(400px, calc(100vw - 40px))',
+        'box-sizing: border-box',
+        'padding: 0 8px',
+        'text-align: ' + (anchorLeft ? 'right' : 'left'),
+        'color: ' + this.config.primaryColor,
+        'font-size: 12px',
         'font-weight: 600',
         'text-decoration: none',
-        'padding: 5px 10px',
-        'border-radius: 12px',
-        'box-shadow: 0 2px 8px rgba(0,0,0,0.2)',
-        'white-space: nowrap',
+        'text-shadow: 0 0 4px rgba(255,255,255,0.6)',
         'opacity: 0',
-        'transform: translateY(-6px)',
-        'transition: opacity 0.25s ease, transform 0.25s ease',
+        'transition: opacity 0.25s ease',
         'pointer-events: none'
       ].join(';');
     },
