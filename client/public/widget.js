@@ -21,6 +21,7 @@
     badge: null,
     iframe: null,
     bubble: null,
+    brandingTag: null,
     greetingTimer: null,
 
     icons: {
@@ -92,8 +93,22 @@
       this.iframe.setAttribute('frameborder', '0');
       this.iframe.setAttribute('allow', 'clipboard-write');
 
+      // Small colored pill, shown only while the widget is open (see
+      // open()/close()) - sits directly below the button in the container's
+      // own flex-column layout (the iframe is position:absolute so it
+      // doesn't participate in that flow; only the button and this tag do,
+      // which is what makes "directly below the button" work for free).
+      this.brandingTag = document.createElement('a');
+      this.brandingTag.id = 'formachat-branding-tag';
+      this.brandingTag.href = 'https://www.formachat.com';
+      this.brandingTag.target = '_blank';
+      this.brandingTag.rel = 'noopener noreferrer';
+      this.brandingTag.textContent = 'Powered by FormaChat';
+      this.brandingTag.style.cssText = this.getBrandingTagStyles();
+
       this.container.appendChild(this.iframe);
       this.container.appendChild(this.button);
+      this.container.appendChild(this.brandingTag);
 
       document.body.appendChild(this.container);
 
@@ -124,6 +139,7 @@
           this.config.primaryColor = data.primaryColor;
           this.button.style.background = data.primaryColor;
           this.button.style.boxShadow = this.getButtonShadow();
+          this.brandingTag.style.background = data.primaryColor;
         }
         if (data.position && data.position !== this.config.position) {
           // Re-anchors the whole container (button + iframe + bubble) to
@@ -239,6 +255,17 @@
       this.button.style.transform = 'scale(1) rotate(90deg)';
       this.button.style.opacity = '1';
       this.button.style.pointerEvents = 'auto';
+
+      // Branding pill appears directly below the button, only while open -
+      // pairs with the button showing its X (closed) icon.
+      this.brandingTag.style.display = 'inline-flex';
+      this.brandingTag.style.pointerEvents = 'auto';
+      requestAnimationFrame(function() {
+        setTimeout(function() {
+          FormachatWidget.brandingTag.style.opacity = '1';
+          FormachatWidget.brandingTag.style.transform = 'translateY(0)';
+        }, 30);
+      });
     },
 
     close: function() {
@@ -250,6 +277,13 @@
       this.button.style.opacity = '1';
       this.button.style.pointerEvents = 'auto';
       this.button.style.boxShadow = this.getButtonShadow();
+
+      this.brandingTag.style.opacity = '0';
+      this.brandingTag.style.transform = 'translateY(-6px)';
+      this.brandingTag.style.pointerEvents = 'none';
+      setTimeout(function() {
+        if (!FormachatWidget.isOpen) FormachatWidget.brandingTag.style.display = 'none';
+      }, 200);
     },
 
     getButtonShadow: function() {
@@ -260,6 +294,12 @@
       var position = this.config.position;
       var right = position.indexOf('right') !== -1 ? '20px' : 'auto';
       var left = position.indexOf('left') !== -1 ? '20px' : 'auto';
+      // The iframe is position:absolute (doesn't participate in this flow),
+      // so button + brandingTag are the only real flex children - stacking
+      // them in a column with the tag appended after the button is what
+      // puts the tag directly below the button, aligned to whichever side
+      // the widget lives on.
+      var alignItems = position.indexOf('left') !== -1 ? 'flex-start' : 'flex-end';
 
       return [
         'position: fixed',
@@ -267,6 +307,10 @@
         'right: ' + right,
         'left: ' + left,
         'z-index: 999999',
+        'display: flex',
+        'flex-direction: column',
+        'align-items: ' + alignItems,
+        'gap: 8px',
         "font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
       ].join(';');
     },
@@ -308,6 +352,26 @@
         'justify-content: center',
         'border: 2px solid white',
         'box-shadow: 0 2px 6px rgba(0,0,0,0.2)'
+      ].join(';');
+    },
+
+    getBrandingTagStyles: function() {
+      return [
+        'display: none',
+        'align-items: center',
+        'background: ' + this.config.primaryColor,
+        'color: white',
+        'font-size: 11px',
+        'font-weight: 600',
+        'text-decoration: none',
+        'padding: 5px 10px',
+        'border-radius: 12px',
+        'box-shadow: 0 2px 8px rgba(0,0,0,0.2)',
+        'white-space: nowrap',
+        'opacity: 0',
+        'transform: translateY(-6px)',
+        'transition: opacity 0.25s ease, transform 0.25s ease',
+        'pointer-events: none'
       ].join(';');
     },
 

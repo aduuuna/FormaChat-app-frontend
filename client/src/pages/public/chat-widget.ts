@@ -178,32 +178,6 @@ function injectWidgetStyles() {
       flex-shrink: 0; /* Prevent header from squishing */
     }
 
-    /* Small hanging tag overlaid on the header's top-right corner, not a
-       full-width band - sits on .chat-widget-container (position:relative),
-       above/on top of .chat-header in the same corner a close control would
-       occupy. A dark translucent pill keeps it legible against any
-       configured header color instead of picking one fixed text color. */
-    .widget-branding-hanging {
-      position: absolute;
-      top: 6px;
-      right: 10px;
-      z-index: 11;
-    }
-    .widget-branding-hanging a {
-      display: inline-block;
-      background: rgba(0,0,0,0.25);
-      color: rgba(255,255,255,0.9);
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
-      text-decoration: none;
-      padding: 3px 8px;
-      border-radius: 10px;
-      backdrop-filter: blur(2px);
-      transition: background 0.2s, color 0.2s;
-    }
-    .widget-branding-hanging a:hover { background: rgba(0,0,0,0.4); color: #fff; }
-
     .header-main-row {
       padding: 15px 20px;
       display: flex;
@@ -352,17 +326,6 @@ export async function renderChatWidget(businessId: string, embedMode: boolean = 
     container.removeChild(loadingDiv);
     const chatUI = createChatUI(business, session, isEmbedMode);
     container.appendChild(chatUI);
-
-    // Hanging tag, not part of chat-ui itself: positioned via
-    // .chat-widget-container's own position:relative, so it survives
-    // independent of the card's overflow:hidden/rounded corners. Still
-    // lives inside this iframe's document, so it automatically disappears
-    // along with everything else when the widget is closed (widget.js
-    // collapses the iframe to 0x0 rather than removing this content).
-    const branding = document.createElement('div');
-    branding.className = 'widget-branding-hanging';
-    branding.innerHTML = `<a href="https://www.formachat.com" target="_blank" rel="noopener noreferrer">Powered by FormaChat</a>`;
-    container.appendChild(branding);
   } catch (error: any) {
     console.error('[Chat Widget] Init failed:', error);
     container.removeChild(loadingDiv);
