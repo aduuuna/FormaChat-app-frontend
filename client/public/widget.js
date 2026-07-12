@@ -426,6 +426,7 @@
           'height: 100vh',
           'max-width: none',
           'max-height: none',
+          'border: none',
           'border-radius: 0',
           'box-shadow: none',
           'opacity: 1',
@@ -455,6 +456,15 @@
         anchorLeft ? 'left: 0' : 'right: 0',
         'width: ' + (isOpen ? '400px' : '0'),
         'height: ' + (isOpen ? '640px' : '0'),
+        // Explicit CSS border, not just the legacy frameborder="0" HTML
+        // attribute set on the element - modern browsers don't reliably
+        // suppress the default iframe border from that attribute alone, so
+        // without this the iframe was likely rendering its own default
+        // browser border (often a grey/white inset bevel) right at its
+        // outer edge. That's almost certainly what read as unexplained
+        // "padding" around the card, and why the intentional 2px colored
+        // border on .chat-ui just inside it wasn't reading as distinct.
+        'border: none',
         'max-height: calc(100vh - 120px)',
         'max-width: calc(100vw - 40px)',
         'box-shadow: ' + (isOpen ? '0 12px 48px rgba(0, 0, 0, 0.12)' : 'none'),
