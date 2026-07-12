@@ -5,12 +5,17 @@ import type { CreateBusinessRequest } from '../../../types/business.types';
 import { showToast } from '../../../utils/toast';
 
 function injectWizardStyles() {
-  if (document.getElementById('business-wizard-styles')) return;
+  if (document.getElementById('business-create-wizard-styles')) return;
 
   const style = document.createElement('style');
-  style.id = 'business-wizard-styles';
+  style.id = 'business-create-wizard-styles';
   style.textContent = `
-    :root {
+    /* Every rule below is scoped under .business-create so this stylesheet
+       can never bleed into (or be shadowed by) the Edit wizard's stylesheet -
+       both pages used to share one <style> id, so whichever page loaded
+       first in the SPA silently won and the other page's CSS never
+       applied at all. */
+    .business-create {
       --primary: #636b2f;       /* Olive */
       --primary-dim: rgba(99, 107, 47, 0.1);
       --secondary: #bac095;     /* Light Olive */
@@ -21,9 +26,7 @@ function injectWizardStyles() {
       --bg-glass: rgba(255, 255, 255, 0.7);
       --border-glass: rgba(255, 255, 255, 0.6);
       --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-    }
 
-    .business-create {
       max-width: 900px;
       margin: 0 auto;
       padding-bottom: 80px;
@@ -32,7 +35,7 @@ function injectWizardStyles() {
     }
 
     /* --- 1. GLASS CONTAINER --- */
-    .wizard-container {
+    .business-create .wizard-container {
       background: var(--bg-glass);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
@@ -41,48 +44,51 @@ function injectWizardStyles() {
       box-shadow: var(--shadow-glass);
       padding: 50px;
       margin-top: 30px;
-      animation: floatUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-      box-sizing: border-box; 
+      animation: createWizardFloatUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+      box-sizing: border-box;
       width: 100%;
     }
 
     @media (max-width: 768px) {
-      .wizard-container {
+      .business-create .wizard-container {
         padding: 30px 20px;
       }
     }
 
-    @keyframes floatUp {
+    @keyframes createWizardFloatUp {
       from { opacity: 0; transform: translateY(30px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
     /* --- 2. HEADER & PROGRESS --- */
-    .page-header {
+    .business-create .page-header {
       text-align: center;
       margin-bottom: 40px;
     }
-    .page-description {
+    .business-create .page-description {
       color: var(--text-muted);
       font-size: 1.1rem;
     }
 
     /* Styled Progress Bar */
-    .progress-dots {
+    .business-create .progress-dots {
       display: flex;
       justify-content: center;
+      align-items: center;
       gap: 15px;
       margin: 30px 0;
+      flex-wrap: wrap;
     }
-    .progress-dot {
+    .business-create .progress-dot {
       width: 12px;
       height: 12px;
       border-radius: 50%;
       background: #e5e7eb;
       transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       position: relative;
+      flex-shrink: 0;
     }
-    .progress-dot::after {
+    .business-create .progress-dot::after {
       content: '';
       position: absolute;
       top: 50%; left: 100%;
@@ -91,18 +97,18 @@ function injectWizardStyles() {
       transform: translateY(-50%);
       z-index: -1;
     }
-    .progress-dot:last-child::after { display: none; }
-    
-    .progress-dot.active {
+    .business-create .progress-dot:last-child::after { display: none; }
+
+    .business-create .progress-dot.active {
       background: var(--primary);
       transform: scale(1.4);
       box-shadow: 0 0 0 4px var(--primary-dim);
     }
-    .progress-dot.completed {
+    .business-create .progress-dot.completed {
       background: var(--success-green);
     }
 
-    .step-counter {
+    .business-create .step-counter {
       text-align: center;
       font-size: 0.85rem;
       font-weight: 700;
@@ -113,20 +119,20 @@ function injectWizardStyles() {
     }
 
     /* --- 3. FORM SECTIONS --- */
-    .form-section {
+    .business-create .form-section {
       display: none;
     }
-    .form-section.active {
+    .business-create .form-section.active {
       display: block;
-      animation: slideInRight 0.4s ease-out;
+      animation: createWizardSlideInRight 0.4s ease-out;
     }
 
-    @keyframes slideInRight {
+    @keyframes createWizardSlideInRight {
       from { opacity: 0; transform: translateX(15px); }
       to { opacity: 1; transform: translateX(0); }
     }
 
-    h2 {
+    .business-create h2 {
       font-size: 1.8rem;
       color: var(--text-main);
       margin-bottom: 25px;
@@ -135,8 +141,8 @@ function injectWizardStyles() {
       border-bottom: 2px solid var(--primary-dim);
       padding-bottom: 10px;
     }
-    
-    h3 {
+
+    .business-create h3 {
       font-size: 1.2rem;
       color: var(--text-main);
       margin-top: 20px;
@@ -144,9 +150,9 @@ function injectWizardStyles() {
     }
 
     /* --- 4. INPUTS & FIELDS --- */
-    .form-field { margin-bottom: 24px; }
-    
-    label {
+    .business-create .form-field { margin-bottom: 24px; }
+
+    .business-create label {
       display: block;
       margin-bottom: 8px;
       font-weight: 600;
@@ -154,12 +160,13 @@ function injectWizardStyles() {
       color: #374151;
     }
 
-    input[type="text"],
-    input[type="email"],
-    input[type="number"],
-    input[type="tel"],
-    textarea,
-    select {
+    .business-create input[type="text"],
+    .business-create input[type="email"],
+    .business-create input[type="number"],
+    .business-create input[type="tel"],
+    .business-create input[type="url"],
+    .business-create textarea,
+    .business-create select {
       width: 100%;
       padding: 14px 16px;
       border: 1px solid #e5e7eb;
@@ -172,14 +179,16 @@ function injectWizardStyles() {
       color: black;
     }
 
-    input:focus, textarea:focus, select:focus {
+    .business-create input:focus,
+    .business-create textarea:focus,
+    .business-create select:focus {
       outline: none;
       border-color: var(--primary);
       background: #fff;
       box-shadow: 0 0 0 4px var(--primary-dim);
     }
 
-    .help-text {
+    .business-create .help-text {
       font-size: 0.85rem;
       color: black;
       margin-top: 6px;
@@ -187,19 +196,19 @@ function injectWizardStyles() {
     }
 
     /* --- 5. TILE/CARD CHECKBOXES (The "Modern" Look) --- */
-    .checkbox-group {
+    .business-create .checkbox-group {
       margin-top: 10px;
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 12px;
     }
 
-    .checkbox-item {
+    .business-create .checkbox-item {
       position: relative;
     }
 
     /* Hidden checkbox/radio but accessible */
-    .checkbox-item input {
+    .business-create .checkbox-item input {
       position: absolute;
       opacity: 0;
       cursor: pointer;
@@ -208,7 +217,7 @@ function injectWizardStyles() {
     }
 
     /* The visual label acts as the card */
-    .checkbox-item label {
+    .business-create .checkbox-item label {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -226,7 +235,7 @@ function injectWizardStyles() {
     }
 
     /* Selected State */
-    .checkbox-item input:checked + label {
+    .business-create .checkbox-item input:checked + label {
       background: var(--primary-dim);
       border-color: var(--primary);
       color: var(--primary);
@@ -235,11 +244,11 @@ function injectWizardStyles() {
     }
 
     /* Single Checkbox toggle (Switch style) */
-    .checkbox-field .checkbox-item {
+    .business-create .checkbox-field .checkbox-item {
       display: flex;
       align-items: center;
     }
-    .checkbox-field input {
+    .business-create .checkbox-field input {
       position: static;
       opacity: 1;
       width: 20px;
@@ -247,7 +256,7 @@ function injectWizardStyles() {
       accent-color: var(--primary);
       margin-right: 10px;
     }
-    .checkbox-field label {
+    .business-create .checkbox-field label {
       border: none;
       background: none;
       box-shadow: none;
@@ -257,15 +266,15 @@ function injectWizardStyles() {
     }
 
     /* --- 6. DYNAMIC ARRAYS (Cards inside Cards) --- */
-    .dynamic-array-section {
+    .business-create .dynamic-array-section {
       background: rgba(255,255,255,0.5);
       border: 1px dashed var(--secondary);
       border-radius: 16px;
       padding: 25px;
       margin-bottom: 30px;
     }
-    
-    .dynamic-array-item {
+
+    .business-create .dynamic-array-item {
       background: #fff;
       border-radius: 12px;
       padding: 20px;
@@ -273,21 +282,23 @@ function injectWizardStyles() {
       border: 1px solid #f0f0f0;
       box-shadow: 0 4px 15px rgba(0,0,0,0.03);
       position: relative;
-      animation: fadeIn 0.3s;
+      animation: createWizardFadeIn 0.3s;
     }
-    
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .business-create .dynamic-array-item:last-child { margin-bottom: 0; }
+
+    @keyframes createWizardFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
     /* --- 7. BUTTONS --- */
-    .wizard-navigation {
+    .business-create .wizard-navigation {
       display: flex;
       justify-content: space-between;
+      gap: 12px;
       margin-top: 40px;
       padding-top: 20px;
       border-top: 1px solid rgba(0,0,0,0.05);
     }
 
-    .btn-nav {
+    .business-create .btn-nav {
       padding: 14px 35px;
       border-radius: 12px;
       font-weight: 600;
@@ -297,28 +308,28 @@ function injectWizardStyles() {
       border: none;
     }
 
-    .btn-prev {
+    .business-create .btn-prev {
       background: #fff;
       border: 1px solid #e5e7eb;
       color: var(--text-main);
     }
-    .btn-prev:hover:not(:disabled) {
+    .business-create .btn-prev:hover:not(:disabled) {
       background: #f9fafb;
       transform: translateX(-3px);
     }
 
-    .btn-next {
+    .business-create .btn-next {
       background: var(--primary);
       color: #fff;
       box-shadow: 0 4px 15px var(--primary-dim);
     }
-    .btn-next:hover:not(:disabled) {
+    .business-create .btn-next:hover:not(:disabled) {
       background: #505726; /* Darker olive */
       transform: translateX(3px);
       box-shadow: 0 6px 20px var(--primary-dim);
     }
 
-    .btn-secondary {
+    .business-create .btn-secondary {
       background: #fff;
       color: var(--primary);
       border: 1px solid var(--primary);
@@ -329,11 +340,11 @@ function injectWizardStyles() {
       font-size: 0.9rem;
       transition: 0.2s;
     }
-    .btn-secondary:hover {
+    .business-create .btn-secondary:hover {
       background: var(--primary-dim);
     }
 
-    .btn-remove {
+    .business-create .btn-remove {
       color: var(--error-red);
       background: #fff0f0;
       border: 1px solid #ffcccc;
@@ -347,7 +358,7 @@ function injectWizardStyles() {
       right: 15px;
     }
 
-    .error-message {
+    .business-create .error-message {
       background: #fef2f2;
       border: 1px solid #fee2e2;
       color: var(--error-red);
@@ -358,13 +369,13 @@ function injectWizardStyles() {
     }
 
     /* --- 8. QUICK START (AI PRE-FILL) --- */
-    .quickstart-intro {
+    .business-create .quickstart-intro {
       color: var(--text-muted);
       font-size: 1rem;
       line-height: 1.6;
       margin-bottom: 24px;
     }
-    .quickstart-divider {
+    .business-create .quickstart-divider {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -374,14 +385,14 @@ function injectWizardStyles() {
       font-weight: 600;
       text-transform: uppercase;
     }
-    .quickstart-divider::before,
-    .quickstart-divider::after {
+    .business-create .quickstart-divider::before,
+    .business-create .quickstart-divider::after {
       content: '';
       flex: 1;
       height: 1px;
       background: #e5e7eb;
     }
-    .quickstart-upload-zone {
+    .business-create .quickstart-upload-zone {
       border: 2px dashed var(--secondary);
       border-radius: 16px;
       padding: 24px;
@@ -389,24 +400,25 @@ function injectWizardStyles() {
       background: rgba(255,255,255,0.5);
       margin-bottom: 20px;
     }
-    .quickstart-upload-zone p {
+    .business-create .quickstart-upload-zone p {
       color: var(--text-muted);
       font-size: 0.85rem;
       margin: 8px 0 0;
     }
-    .quickstart-filename {
+    .business-create .quickstart-filename {
       font-weight: 600;
       color: var(--primary);
       margin-top: 10px;
       font-size: 0.9rem;
     }
-    .quickstart-actions {
+    .business-create .quickstart-actions {
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
+      align-items: center;
       margin-top: 24px;
     }
-    .btn-quickstart-skip {
+    .business-create .btn-quickstart-skip {
       background: transparent;
       color: var(--text-muted);
       border: none;
@@ -415,7 +427,7 @@ function injectWizardStyles() {
       text-decoration: underline;
       padding: 14px 10px;
     }
-    .quickstart-summary {
+    .business-create .quickstart-summary {
       background: rgba(5, 150, 105, 0.08);
       border: 1px solid rgba(5, 150, 105, 0.3);
       color: var(--success-green);
@@ -425,6 +437,28 @@ function injectWizardStyles() {
       font-weight: 600;
       font-size: 0.9rem;
       display: none;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      .business-create {
+        padding: 0 12px 60px;
+      }
+      .business-create .wizard-container {
+        padding: 24px 18px;
+        border-radius: 16px;
+      }
+      .business-create h2 {
+        font-size: 1.3rem;
+        margin-bottom: 18px;
+      }
+      .business-create .wizard-navigation {
+        margin-top: 28px;
+      }
+      .business-create .btn-nav {
+        padding: 12px 20px;
+        font-size: 0.9rem;
+      }
     }
   `;
   document.head.appendChild(style);

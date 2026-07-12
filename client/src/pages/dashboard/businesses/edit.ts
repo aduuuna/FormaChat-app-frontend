@@ -6,12 +6,18 @@ import type { UpdateBusinessRequest, Business } from '../../../types/business.ty
 import { showToast } from '../../../utils/toast';
 
 function injectEditWizardStyles() {
-  if (document.getElementById('business-wizard-styles')) return;
+  if (document.getElementById('business-edit-wizard-styles')) return;
 
   const style = document.createElement('style');
-  style.id = 'business-wizard-styles';
+  style.id = 'business-edit-wizard-styles';
   style.textContent = `
-    :root {
+    /* Outer wrapper — constrained and centered.
+       Every rule below is scoped under .business-edit-wizard so this
+       stylesheet can never bleed into (or be shadowed by) the Create
+       wizard's stylesheet - both pages used to share one <style> id,
+       so whichever page loaded first in the SPA silently won and the
+       other page's CSS never applied at all. */
+    .business-edit-wizard {
       --primary: #636b2f;
       --primary-dim: rgba(99, 107, 47, 0.1);
       --secondary: #bac095;
@@ -22,10 +28,7 @@ function injectEditWizardStyles() {
       --bg-glass: rgba(255, 255, 255, 0.7);
       --border-glass: rgba(255, 255, 255, 0.6);
       --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-    }
 
-    /* Outer wrapper — constrained and centered */
-    .business-edit-wizard {
       max-width: 900px;
       width: 100%;
       margin: 0 auto;
@@ -35,7 +38,7 @@ function injectEditWizardStyles() {
     }
 
     /* Glass Container */
-    .wizard-container {
+    .business-edit-wizard .wizard-container {
       background: var(--bg-glass);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
@@ -44,35 +47,38 @@ function injectEditWizardStyles() {
       box-shadow: var(--shadow-glass);
       padding: 44px 48px;
       margin-top: 24px;
-      animation: floatUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+      animation: editWizardFloatUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
       box-sizing: border-box;
       width: 100%;
     }
 
-    @keyframes floatUp {
+    @keyframes editWizardFloatUp {
       from { opacity: 0; transform: translateY(24px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
     /* Progress */
-    .wizard-progress-bar {
+    .business-edit-wizard .wizard-progress-bar {
       display: flex;
       justify-content: center;
+      align-items: center;
       gap: 14px;
       margin: 24px 0;
+      flex-wrap: wrap;
     }
 
-    .progress-dot {
+    .business-edit-wizard .progress-dot {
       width: 11px;
       height: 11px;
       border-radius: 50%;
       background: #e5e7eb;
       transition: all 0.3s ease;
+      flex-shrink: 0;
     }
-    .progress-dot.active    { background: var(--primary); transform: scale(1.4); }
-    .progress-dot.completed { background: var(--success-green); }
+    .business-edit-wizard .progress-dot.active    { background: var(--primary); transform: scale(1.4); }
+    .business-edit-wizard .progress-dot.completed { background: var(--success-green); }
 
-    .step-counter {
+    .business-edit-wizard .step-counter {
       text-align: center;
       font-size: 0.82rem;
       font-weight: 700;
@@ -83,19 +89,19 @@ function injectEditWizardStyles() {
     }
 
     /* Form Sections */
-    .form-section { display: none; }
-    .form-section.active {
+    .business-edit-wizard .form-section { display: none; }
+    .business-edit-wizard .form-section.active {
       display: block;
-      animation: slideIn 0.35s ease-out;
+      animation: editWizardSlideIn 0.35s ease-out;
     }
 
-    @keyframes slideIn {
+    @keyframes editWizardSlideIn {
       from { opacity: 0; transform: translateX(12px); }
       to   { opacity: 1; transform: translateX(0); }
     }
 
     /* Section headings */
-    .form-section h2 {
+    .business-edit-wizard .form-section h2 {
       font-size: 1.5rem;
       color: var(--text-main);
       margin: 0 0 22px 0;
@@ -103,16 +109,16 @@ function injectEditWizardStyles() {
       border-bottom: 2px solid var(--primary-dim);
       padding-bottom: 10px;
     }
-    .form-section h3 {
+    .business-edit-wizard .form-section h3 {
       font-size: 1.05rem;
       color: var(--text-main);
       margin: 20px 0 8px;
     }
 
     /* Inputs */
-    .form-field { margin-bottom: 20px; }
+    .business-edit-wizard .form-field { margin-bottom: 20px; }
 
-    label {
+    .business-edit-wizard label {
       display: block;
       margin-bottom: 7px;
       font-weight: 600;
@@ -120,7 +126,9 @@ function injectEditWizardStyles() {
       font-size: 0.9rem;
     }
 
-    input, textarea, select {
+    .business-edit-wizard input,
+    .business-edit-wizard textarea,
+    .business-edit-wizard select {
       width: 100%;
       padding: 12px 14px;
       border: 1px solid #e5e7eb;
@@ -133,7 +141,9 @@ function injectEditWizardStyles() {
       color: #1a1a1a;
     }
 
-    input:focus, textarea:focus, select:focus {
+    .business-edit-wizard input:focus,
+    .business-edit-wizard textarea:focus,
+    .business-edit-wizard select:focus {
       outline: none;
       border-color: var(--primary);
       background: #fff;
@@ -141,14 +151,14 @@ function injectEditWizardStyles() {
     }
 
     /* Checkbox tiles — 2 columns on mobile */
-    .checkbox-group {
+    .business-edit-wizard .checkbox-group {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 10px;
     }
-    .checkbox-item { position: relative; }
-    .checkbox-item input { position: absolute; opacity: 0; width: 0; height: 0; }
-    .checkbox-item label {
+    .business-edit-wizard .checkbox-item { position: relative; }
+    .business-edit-wizard .checkbox-item input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .business-edit-wizard .checkbox-item label {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -162,16 +172,40 @@ function injectEditWizardStyles() {
       font-size: 0.88rem;
       transition: all 0.2s;
       min-height: 48px;
+      margin: 0;
     }
-    .checkbox-item input:checked + label {
+    .business-edit-wizard .checkbox-item input:checked + label {
       background: var(--primary-dim);
       border-color: var(--primary);
       color: var(--primary);
       font-weight: 700;
     }
 
+    /* Single checkbox toggle (e.g. "Allow chatbot to discuss pricing") */
+    .business-edit-wizard .checkbox-field .checkbox-item {
+      display: flex;
+      align-items: center;
+    }
+    .business-edit-wizard .checkbox-field input {
+      position: static;
+      opacity: 1;
+      width: 20px;
+      height: 20px;
+      accent-color: var(--primary);
+      margin-right: 10px;
+    }
+    .business-edit-wizard .checkbox-field label {
+      border: none;
+      background: none;
+      box-shadow: none;
+      padding: 0;
+      text-align: left;
+      justify-content: flex-start;
+      min-height: 0;
+    }
+
     /* Dynamic array sections */
-    .dynamic-array-section {
+    .business-edit-wizard .dynamic-array-section {
       background: rgba(255,255,255,0.5);
       border: 1px dashed var(--secondary);
       border-radius: 14px;
@@ -179,7 +213,7 @@ function injectEditWizardStyles() {
       margin-bottom: 24px;
       box-sizing: border-box;
     }
-    .dynamic-array-item {
+    .business-edit-wizard .dynamic-array-item {
       background: #fff;
       border-radius: 10px;
       padding: 16px;
@@ -189,9 +223,10 @@ function injectEditWizardStyles() {
       position: relative;
       box-sizing: border-box;
     }
+    .business-edit-wizard .dynamic-array-item:last-child { margin-bottom: 0; }
 
     /* Navigation buttons */
-    .wizard-navigation {
+    .business-edit-wizard .wizard-navigation {
       display: flex;
       justify-content: space-between;
       gap: 12px;
@@ -199,7 +234,7 @@ function injectEditWizardStyles() {
       padding-top: 20px;
       border-top: 1px solid rgba(0,0,0,0.05);
     }
-    .btn-nav {
+    .business-edit-wizard .btn-nav {
       padding: 13px 28px;
       border-radius: 10px;
       font-weight: 600;
@@ -208,11 +243,15 @@ function injectEditWizardStyles() {
       border: none;
       flex: 1;
       max-width: 200px;
+      transition: all 0.2s;
     }
-    .btn-prev { background: #fff; border: 1px solid #e5e7eb; color: var(--text-main); }
-    .btn-next { background: var(--primary); color: #fff; }
+    .business-edit-wizard .btn-prev { background: #fff; border: 1px solid #e5e7eb; color: var(--text-main); }
+    .business-edit-wizard .btn-prev:hover:not(:disabled) { background: #f9fafb; }
+    .business-edit-wizard .btn-prev:disabled { opacity: 0.5; cursor: not-allowed; }
+    .business-edit-wizard .btn-next { background: var(--primary); color: #fff; }
+    .business-edit-wizard .btn-next:hover { background: #505726; }
 
-    .btn-secondary {
+    .business-edit-wizard .btn-secondary {
       background: #fff;
       color: var(--primary);
       border: 1px solid var(--primary);
@@ -220,8 +259,11 @@ function injectEditWizardStyles() {
       border-radius: 8px;
       cursor: pointer;
       font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 4px;
     }
-    .btn-remove {
+    .business-edit-wizard .btn-secondary:hover { background: var(--primary-dim); }
+    .business-edit-wizard .btn-remove {
       color: var(--error-red);
       background: #fff0f0;
       border: 1px solid #ffcccc;
@@ -229,12 +271,13 @@ function injectEditWizardStyles() {
       border-radius: 6px;
       cursor: pointer;
       font-size: 0.78rem;
+      font-weight: 600;
       position: absolute;
       top: 12px;
       right: 12px;
     }
 
-    .error-message {
+    .business-edit-wizard .error-message {
       background: #fef2f2;
       border: 1px solid #fee2e2;
       color: var(--error-red);
@@ -243,6 +286,7 @@ function injectEditWizardStyles() {
       margin-bottom: 18px;
       display: none;
       font-size: 0.9rem;
+      font-weight: 500;
     }
 
     /* ── Mobile ── */
@@ -251,74 +295,80 @@ function injectEditWizardStyles() {
         padding: 0 12px 48px;
       }
 
-      .wizard-container {
+      .business-edit-wizard .wizard-container {
         padding: 24px 18px;
         border-radius: 14px;
         margin-top: 16px;
       }
 
-      .form-section h2 {
+      .business-edit-wizard .wizard-progress-bar {
+        gap: 10px;
+      }
+
+      .business-edit-wizard .form-section h2 {
         font-size: 1.2rem;
         margin-bottom: 18px;
       }
 
-      .form-section h3 {
+      .business-edit-wizard .form-section h3 {
         font-size: 0.95rem;
       }
 
-      input, textarea, select {
+      .business-edit-wizard input,
+      .business-edit-wizard textarea,
+      .business-edit-wizard select {
         padding: 11px 12px;
         font-size: 0.9rem;
         border-radius: 8px;
       }
 
-      .checkbox-group {
+      .business-edit-wizard .checkbox-group {
         grid-template-columns: 1fr 1fr;
         gap: 8px;
       }
 
-      .checkbox-item label {
+      .business-edit-wizard .checkbox-item label {
         padding: 10px 6px;
         font-size: 0.82rem;
         min-height: 44px;
       }
 
-      .dynamic-array-section {
+      .business-edit-wizard .dynamic-array-section {
         padding: 14px 12px;
         border-radius: 10px;
       }
 
-      .dynamic-array-item {
+      .business-edit-wizard .dynamic-array-item {
         padding: 12px;
         padding-right: 46px;
         border-radius: 8px;
       }
 
-      .btn-remove {
+      .business-edit-wizard .btn-remove {
         top: 10px;
         right: 10px;
         padding: 4px 8px;
         font-size: 0.75rem;
       }
 
-      .wizard-navigation {
+      .business-edit-wizard .wizard-navigation {
         margin-top: 28px;
         gap: 10px;
       }
 
-      .btn-nav {
+      .business-edit-wizard .btn-nav {
         padding: 12px 16px;
         font-size: 0.88rem;
         max-width: none;
       }
 
-      .step-counter {
+      .business-edit-wizard .step-counter {
         font-size: 0.75rem;
         letter-spacing: 0.5px;
         margin-bottom: 20px;
       }
 
-      .form-field {
+      .business-edit-wizard .form-field {
         margin-bottom: 16px;
       }
     }
