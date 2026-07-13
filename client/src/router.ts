@@ -239,7 +239,7 @@ class Router {
         import('./pages/dashboard/home'),
         import('./pages/dashboard/layout'),
       ]);
-      const content = renderDashboardHome();
+      const content = await renderDashboardHome();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
     }, 'Dashboard - FormaChat');

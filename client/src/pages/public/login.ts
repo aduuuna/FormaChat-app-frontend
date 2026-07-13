@@ -290,7 +290,7 @@ export function renderLogin(): HTMLElement {
             }
 
             otpSubmitBtn.textContent = 'Success!';
-            otpSubmitBtn.style.background = '#28a745';
+            otpSubmitBtn.style.background = '#4f5625';
             completeSuccessfulLogin(response.data);
         } catch {
             showToast('An unexpected error occurred. Please try again.', 'error');
@@ -426,7 +426,7 @@ export function renderLogin(): HTMLElement {
             }
 
             submitBtn.textContent = 'Success!';
-            submitBtn.style.background = '#28a745';
+            submitBtn.style.background = '#4f5625';
 
             completeSuccessfulLogin(response.data);
 

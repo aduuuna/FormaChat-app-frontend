@@ -15,7 +15,6 @@ function injectVerifyEmailStyles() {
             --text-main: #1a1a1a;
             --text-muted: #666;
             --error-red: #dc3545;
-            --success-green: #28a745;
             --bg-light: #f7f9fb;
         }
 

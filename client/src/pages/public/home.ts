@@ -1,23 +1,24 @@
+import { createFeaturesSection } from '../../components/features-section';
+import type { Feature } from '../../components/features-section';
+
 export function renderHome(): HTMLElement {
- 
+
   const style = document.createElement('style');
   style.textContent = `
     :root {
       --primary: #636b2f;
+      --primary-dark: #4f5625;
       --secondary: #bac095;
       --text-main: #1a1a1a;
       --text-muted: #666;
-      --badge-bg: #D1FAE5;
-      --badge-text: #059669;
+      --light-olive: #f4f6ea;
     }
 
     .home-container {
       max-width: 1000px;
       margin: 0 auto;
-      padding: 40px 20px;
+      padding: 40px 20px 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      overflow: hidden; /* Prevents animation scrollbars */
-      min-height: 100vh; /* Add this - ensures container fills viewport */
       overflow-x: hidden;
     }
 
@@ -27,29 +28,16 @@ export function renderHome(): HTMLElement {
       to { opacity: 1; transform: translateY(0); }
     }
 
-    @keyframes float {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-10px); }
-      100% { transform: translateY(0px); }
-    }
-
-    @keyframes glow {
-      0% { box-shadow: 0 0 20px rgba(99, 107, 47, 0.1); }
-      50% { box-shadow: 0 0 40px rgba(99, 107, 47, 0.3); }
-      100% { box-shadow: 0 0 20px rgba(99, 107, 47, 0.1); }
-    }
-
     .hero-section {
       text-align: center;
       margin-bottom: 60px;
     }
 
     .animate-item {
-      opacity: 0; /* Start hidden */
+      opacity: 0;
       animation: fadeInUp 0.8s ease forwards;
     }
 
-    /* Stagger delays */
     .delay-1 { animation-delay: 0.1s; }
     .delay-2 { animation-delay: 0.2s; }
     .delay-3 { animation-delay: 0.3s; }
@@ -57,7 +45,7 @@ export function renderHome(): HTMLElement {
     .delay-5 { animation-delay: 0.5s; }
 
     h1.hero-title {
-      font-size: clamp(2.5rem, 5vw, 4rem); /* Responsive font size */
+      font-size: clamp(2.5rem, 5vw, 4rem);
       margin: 0 0 20px 0;
       color: var(--text-main);
       line-height: 1.1;
@@ -73,7 +61,6 @@ export function renderHome(): HTMLElement {
       line-height: 1.6;
     }
 
-    /* Button Styling */
     .button-group {
       display: flex;
       flex-direction: column;
@@ -110,7 +97,7 @@ export function renderHome(): HTMLElement {
       color: white !important;
     }
     .btn-login:hover {
-      background: #a3a980; /* Slightly darker shade of secondary */
+      background: #a3a980;
       transform: translateY(-2px);
       color: white !important;
     }
@@ -121,7 +108,7 @@ export function renderHome(): HTMLElement {
       box-shadow: 0 10px 15px -3px rgba(99, 107, 47, 0.3);
     }
     .btn-register:hover {
-      background: #4f5625; /* Darker primary */
+      background: var(--primary-dark);
       transform: translateY(-2px);
       box-shadow: 0 20px 25px -5px rgba(99, 107, 47, 0.4);
       color: white !important;
@@ -134,116 +121,211 @@ export function renderHome(): HTMLElement {
       letter-spacing: 0.5px;
     }
 
-    /* The "Intrigue" Placeholder Graphic */
-    .visual-placeholder {
-    margin-top: 60px;
-    position: relative;
-    height: 300px;
-    max-width: 800px;
-    margin-left: auto;
-    margin-right: auto;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px 12px 0 0;
-    box-shadow: 0 -20px 60px -10px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    animation: fadeInUp 1s ease forwards 0.6s;
-    opacity: 0;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    gap: 10px;
-    padding: 10px;
-  }
+    /* --- Screenshot showcase: real product screenshots, not placeholders --- */
+    .showcase-section {
+      margin: 20px 0 80px;
+      animation: fadeInUp 1s ease forwards 0.5s;
+      opacity: 0;
+    }
 
-  .screenshot-box {
-    background-size: cover;
-    background-position: center;
-    border-radius: 8px;
-    animation: fadeBox 8s infinite;
-    opacity: 0.8;
-  }
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
 
-  /* Stagger animation delays for each box */
-  .screenshot-box:nth-child(1) { animation-delay: 0s; }
-  .screenshot-box:nth-child(2) { animation-delay: 1s; }
-  .screenshot-box:nth-child(3) { animation-delay: 2s; }
-  .screenshot-box:nth-child(4) { animation-delay: 3s; }
-  .screenshot-box:nth-child(5) { animation-delay: 4s; }
-  .screenshot-box:nth-child(6) { animation-delay: 5s; }
-  .screenshot-box:nth-child(7) { animation-delay: 6s; }
-  .screenshot-box:nth-child(8) { animation-delay: 7s; }
-
-  @keyframes fadeBox {
-    0%, 100% { opacity: 0.6; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.05); }
-  }
-
-    /* Abstract UI Elements to create "Placeholder Vibe" */
-    .abstract-sidebar {
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 20%;
+    .showcase-card {
       background: white;
-      border-right: 1px solid #e5e7eb;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-    .abstract-header {
-      position: absolute;
-      top: 0; left: 20%; right: 0;
-      height: 50px;
-      border-bottom: 1px solid #e5e7eb;
+
+    .showcase-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.1);
+    }
+
+    .showcase-card img {
+      width: 100%;
+      display: block;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .showcase-caption {
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    @media (max-width: 700px) {
+      .showcase-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* --- How it works --- */
+    .section {
+      margin-bottom: 80px;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .section-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 0 0 8px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .section-subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .step-card {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .step-number {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
       background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      margin: 0 auto 18px;
     }
-    .abstract-bubble {
-      position: absolute;
-      left: 25%;
-      height: 12px;
-      background: #e5e7eb;
-      border-radius: 6px;
+
+    .step-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin: 0 0 10px;
     }
-    
-    /* Floating Interaction Card */
-    .floating-card {
-      position: absolute;
-      top: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 60%;
-      height: 180px;
-      background: 
-    linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(243,244,246,0.3) 100%),
-    url('/assets/shot1.png') center/cover no-repeat;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.8);
-      border-radius: 16px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-      animation: float 6s ease-in-out infinite;
+
+    .step-desc {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    @media (max-width: 700px) {
+      .steps-grid { grid-template-columns: 1fr; }
+    }
+
+    /* --- FAQ --- */
+    .faq-list {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      padding: 20px 4px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-family: inherit;
+    }
+
+    .faq-question svg {
+      flex-shrink: 0;
+      transition: transform 0.25s ease;
+      color: var(--primary);
+    }
+
+    .faq-item.open .faq-question svg {
+      transform: rotate(180deg);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .faq-answer p {
+      margin: 0 4px 20px;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+
+    /* --- Footer --- */
+    .home-footer {
+      border-top: 1px solid #e5e7eb;
+      margin-top: 60px;
+      padding: 40px 0;
+    }
+
+    .footer-inner {
       display: flex;
       flex-direction: column;
-      justify-content: center;
       align-items: center;
+      gap: 16px;
+      text-align: center;
     }
-    
-    .loading-pulse {
-      width: 80px;
-      height: 80px;
-      border-radius:50%;
-      background: transparent;
+
+    .footer-brand {
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--primary);
+    }
+
+    .footer-links {
       display: flex;
-      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
       justify-content: center;
-      color: var(--badge-text);
-      font-size: 20px;
-      margin-bottom: 15px;
-      animation: glow 3s infinite;
     }
-    
-    .loading-line {
-      height: 8px;
-      background: #f3f4f6;
-      border-radius: 4px;
-      width: 70%;
-      margin-bottom: 10px;
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .footer-links a:hover {
+      color: var(--primary);
+    }
+
+    .footer-copy {
+      color: #999;
+      font-size: 0.82rem;
     }
   `;
   document.head.appendChild(style);
@@ -251,6 +333,7 @@ export function renderHome(): HTMLElement {
   const container = document.createElement('div');
   container.className = 'home-container';
 
+  // === HERO ===
   const hero = document.createElement('div');
   hero.className = 'hero-section';
 
@@ -286,60 +369,221 @@ export function renderHome(): HTMLElement {
   trustSignal.innerHTML = '✓ No credit card required &nbsp;•&nbsp; ✓ Setup in 5 minutes &nbsp;•&nbsp; ✓ Instant 24/7 responses';
   hero.appendChild(trustSignal);
 
-  const visual = document.createElement('div');
-  visual.className = 'visual-placeholder';
+  container.appendChild(hero);
 
-  const screenshots = [
-    '/assets/shot1.png',
-    '/assets/logo.png',
-    '/assets/shot2.png',
-    '/assets/shot3.png',
-    '/assets/logo.png',
-    '/assets/shot3.png',
-    '/assets/logo.png',
-    '/assets/shot5.png'
+  // === SCREENSHOT SHOWCASE (real product screenshots) ===
+  const showcase = document.createElement('div');
+  showcase.className = 'showcase-section';
+  const showcaseGrid = document.createElement('div');
+  showcaseGrid.className = 'showcase-grid';
+
+  const showcaseItems = [
+    { src: '/assets/shot1.png', caption: 'Track sessions, leads, and conversions' },
+    { src: '/assets/shot5.png', caption: 'Test your bot before it goes live' },
+    { src: '/assets/shot3.png', caption: 'Share a QR code, no app required' },
   ];
 
-  screenshots.forEach(src => {
-    const box = document.createElement('div');
-    box.className = 'screenshot-box';
-    box.style.backgroundImage = `url('${src}')`;
-    visual.appendChild(box);
+  showcaseItems.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'showcase-card';
+    const img = document.createElement('img');
+    img.src = item.src;
+    img.alt = item.caption;
+    img.loading = 'lazy';
+    card.appendChild(img);
+    const caption = document.createElement('div');
+    caption.className = 'showcase-caption';
+    caption.textContent = item.caption;
+    card.appendChild(caption);
+    showcaseGrid.appendChild(card);
   });
 
-  
-  const sidebar = document.createElement('div');
-  sidebar.className = 'abstract-sidebar';
-  visual.appendChild(sidebar);
-  
-  const header = document.createElement('div');
-  header.className = 'abstract-header';
-  visual.appendChild(header);
+  showcase.appendChild(showcaseGrid);
+  container.appendChild(showcase);
 
-  const floatingCard = document.createElement('div');
-  floatingCard.className = 'floating-card';
-  
-  const icon = document.createElement('img');
-  icon.src = '/assets/logo.png';
-  icon.className = 'loading-pulse';
-  icon.style.width = '40px';
-  icon.style.height = '40px';
-  icon.style.objectFit = 'contain';
-  floatingCard.appendChild(icon);
-  
-  const line1 = document.createElement('div');
-  line1.className = 'loading-line';
-  floatingCard.appendChild(line1);
-  
-  const line2 = document.createElement('div');
-  line2.className = 'loading-line';
-  line2.style.width = '50%';
-  floatingCard.appendChild(line2);
+  // === HOW IT WORKS ===
+  const howItWorks = document.createElement('div');
+  howItWorks.className = 'section';
 
-  visual.appendChild(floatingCard);
-  hero.appendChild(visual);
+  const howHeader = document.createElement('div');
+  howHeader.className = 'section-header';
+  const howTitle = document.createElement('h2');
+  howTitle.className = 'section-title';
+  howTitle.textContent = 'How it works';
+  howHeader.appendChild(howTitle);
+  const howSub = document.createElement('p');
+  howSub.className = 'section-subtitle';
+  howSub.textContent = 'From signup to your first customer conversation in about five minutes.';
+  howHeader.appendChild(howSub);
+  howItWorks.appendChild(howHeader);
 
-  container.appendChild(hero);
+  const stepsGrid = document.createElement('div');
+  stepsGrid.className = 'steps-grid';
+
+  const steps = [
+    {
+      title: 'Tell us about your business',
+      desc: 'Paste your website text or upload a document. FormaChat drafts your business profile automatically, so you are not starting from a blank form.'
+    },
+    {
+      title: 'Add your products and documents',
+      desc: 'Add product photos, prices, and stock, and upload PDFs or manuals so your AI has real answers, not guesses.'
+    },
+    {
+      title: 'Embed one script tag',
+      desc: 'Copy one line of code onto your site, or share a direct link or QR code. Your chatbot is live and answering customers.'
+    }
+  ];
+
+  steps.forEach((step, i) => {
+    const card = document.createElement('div');
+    card.className = 'step-card';
+    const num = document.createElement('div');
+    num.className = 'step-number';
+    num.textContent = String(i + 1);
+    card.appendChild(num);
+    const t = document.createElement('h3');
+    t.className = 'step-title';
+    t.textContent = step.title;
+    card.appendChild(t);
+    const d = document.createElement('p');
+    d.className = 'step-desc';
+    d.textContent = step.desc;
+    card.appendChild(d);
+    stepsGrid.appendChild(card);
+  });
+
+  howItWorks.appendChild(stepsGrid);
+  container.appendChild(howItWorks);
+
+  // === FEATURES (reuses the same component the dashboard home page uses) ===
+  const features: Feature[] = [
+    {
+      title: 'Available today',
+      description: [
+        'AI chatbot trained on your own business data, not generic answers',
+        'Live product catalog with real time stock and pricing',
+        'Document knowledge base: upload PDFs and manuals',
+        'Embeddable widget, customizable to match your brand',
+        'Automatic lead capture with instant notifications',
+        'Analytics dashboard with sessions, leads, and CSV export',
+        'Webhooks to connect your CRM, Zapier, or any tool',
+        'Two factor authentication and secure multi device sessions'
+      ],
+      status: 'available'
+    },
+    {
+      title: 'Coming next',
+      description: [
+        'Live streaming responses',
+        'Multi language support',
+        'Human handoff for conversations that need a real person',
+        'WhatsApp, Telegram, and Instagram integrations',
+        'Simple pricing plans as FormaChat grows with you',
+        'A developer API and SDK for custom integrations'
+      ],
+      status: 'coming-soon'
+    }
+  ];
+
+  const featuresSection = document.createElement('div');
+  featuresSection.className = 'section';
+  featuresSection.appendChild(createFeaturesSection(features));
+  container.appendChild(featuresSection);
+
+  // === FAQ ===
+  const faqSection = document.createElement('div');
+  faqSection.className = 'section';
+  const faqHeader = document.createElement('div');
+  faqHeader.className = 'section-header';
+  const faqTitle = document.createElement('h2');
+  faqTitle.className = 'section-title';
+  faqTitle.textContent = 'Questions people actually ask';
+  faqHeader.appendChild(faqTitle);
+  faqSection.appendChild(faqHeader);
+
+  const faqList = document.createElement('div');
+  faqList.className = 'faq-list';
+
+  const faqs = [
+    {
+      q: 'Is my business data safe?',
+      a: 'Yes. Accounts are protected with two factor authentication, breach checked passwords, and secure session management, and you can sign out any device at any time from your settings.'
+    },
+    {
+      q: 'Do I need to be technical to set this up?',
+      a: 'No. You can paste your website text or upload a document and FormaChat drafts your business profile for you. Going live just means copying one script tag onto your site.'
+    },
+    {
+      q: 'Can I control what the chatbot says?',
+      a: 'Yes. You set the tone, a custom greeting, and any restrictions or instructions the AI should follow, and it only answers from the information and products you give it.'
+    },
+    {
+      q: 'Does it work on mobile?',
+      a: 'Yes. The chat widget is fully responsive and switches to a full screen layout on phones, and your dashboard works the same way on any device.'
+    },
+    {
+      q: 'What happens if I want to stop using FormaChat?',
+      a: 'Deactivating your account signs you out everywhere immediately. If you change your mind, logging back in within 30 days reactivates your account automatically.'
+    }
+  ];
+
+  faqs.forEach(item => {
+    const faqItem = document.createElement('div');
+    faqItem.className = 'faq-item';
+
+    const question = document.createElement('button');
+    question.type = 'button';
+    question.className = 'faq-question';
+    question.innerHTML = `<span>${item.q}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+
+    const answer = document.createElement('div');
+    answer.className = 'faq-answer';
+    const answerP = document.createElement('p');
+    answerP.textContent = item.a;
+    answer.appendChild(answerP);
+
+    question.addEventListener('click', () => {
+      const isOpen = faqItem.classList.contains('open');
+      faqItem.classList.toggle('open', !isOpen);
+      answer.style.maxHeight = isOpen ? '0' : `${answer.scrollHeight}px`;
+    });
+
+    faqItem.appendChild(question);
+    faqItem.appendChild(answer);
+    faqList.appendChild(faqItem);
+  });
+
+  faqSection.appendChild(faqList);
+  container.appendChild(faqSection);
+
+  // === FOOTER ===
+  const footer = document.createElement('footer');
+  footer.className = 'home-footer';
+  const footerInner = document.createElement('div');
+  footerInner.className = 'footer-inner';
+
+  const footerBrand = document.createElement('div');
+  footerBrand.className = 'footer-brand';
+  footerBrand.textContent = 'FormaChat';
+  footerInner.appendChild(footerBrand);
+
+  const footerLinks = document.createElement('div');
+  footerLinks.className = 'footer-links';
+  footerLinks.innerHTML = `
+    <a href="#/register">Get Started</a>
+    <a href="#/login">Login</a>
+    <a href="mailto:support@formachat.com">Contact</a>
+  `;
+  footerInner.appendChild(footerLinks);
+
+  const footerCopy = document.createElement('div');
+  footerCopy.className = 'footer-copy';
+  footerCopy.textContent = `© ${new Date().getFullYear()} FormaChat. All rights reserved.`;
+  footerInner.appendChild(footerCopy);
+
+  footer.appendChild(footerInner);
+  container.appendChild(footer);
 
   return container;
 }
