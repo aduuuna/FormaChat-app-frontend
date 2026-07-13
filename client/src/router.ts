@@ -2,26 +2,13 @@ import { isAuthenticated, getAccessToken, isTokenExpired, logout } from './utils
 import { refreshAccessToken } from './utils/api.utils';
 import { renderTo } from './utils/dom.utils';
 
-import { renderHome } from './pages/public/home';
-import { renderLogin } from './pages/public/login';
-import { renderRegister } from './pages/public/register';
-import { renderVerifyEmail } from './pages/public/verify-email';
-import { renderForgotPassword } from './pages/public/forgot-password';
-import { renderMagicLogin } from './pages/public/magic-login';
-import { renderDashboardLayout } from './pages/dashboard/layout';
-import { renderDashboardHome } from './pages/dashboard/home';
-import { renderSettingsPage } from './pages/dashboard/settings';
-import { renderBusinessList } from './pages/dashboard/businesses/list';
-import { renderBusinessCreate } from './pages/dashboard/businesses/create';
-import { renderBusinessEdit } from './pages/dashboard/businesses/edit';
-import { renderProductsPage } from './pages/dashboard/businesses/products';
-import { renderDocumentsPage } from './pages/dashboard/businesses/documents';
-import { renderChannelsIndex } from './pages/dashboard/channels/index';
-import { renderChannelsDetail } from './pages/dashboard/channels/detail';
-import { renderAnalyticsIndex } from './pages/dashboard/analytics/index';
-import { renderAnalyticsDetail } from './pages/dashboard/analytics/detail';
-import { renderChatWidget } from './pages/public/chat-widget';
-import { renderNotFound } from './pages/public/not-found';
+// Every page is dynamically imported inside its own route handler instead of
+// statically imported up here. Static imports at module scope meant every
+// visitor - even someone just landing on the public homepage - downloaded
+// one bundle containing the entire dashboard, business management,
+// analytics, and chat widget code before anything could render. Dynamic
+// import() gives Vite/Rollup a natural split point: each page becomes its
+// own chunk, fetched only when that route is actually visited.
 
 type RouteHandler = () => void | Promise<void>;
 
@@ -55,7 +42,7 @@ class Router {
   }
 
   private getCurrentPath(): string {
-    let hash = window.location.hash.slice(1); 
+    let hash = window.location.hash.slice(1);
     if (!hash) return '/';
 
     let path = hash.split('?')[0];
@@ -113,7 +100,7 @@ class Router {
 
     if (!match) {
       console.warn(`[Router] 404 - No route matched for "${path}".`);
-    
+
       if (embedMode) {
         const appRoot = document.getElementById('app');
         if (appRoot) {
@@ -123,6 +110,7 @@ class Router {
       }
       const appRoot = document.getElementById('app');
       if (appRoot) {
+        const { renderNotFound } = await import('./pages/public/not-found');
         renderTo(appRoot, renderNotFound());
       }
       return;
@@ -136,25 +124,25 @@ class Router {
 
     if (embedMode) {
       console.log('[Router] Embed mode active');
-     
+
       (window as any).routeParams = params;
       try {
         await route.handler();
       } catch (error) {
         console.error('[Router] Handler error:', error);
       }
-      return; 
+      return;
     }
 
     if (route.isProtected) {
       const authenticated = isAuthenticated();
-      
+
       if (!authenticated) {
         console.warn('[Router] Unauthorized. Redirecting to login.');
         this.navigate('/login');
         return;
       }
-      
+
       const accessToken = getAccessToken();
       if (accessToken && isTokenExpired(accessToken)) {
         const refreshed = await refreshAccessToken();
@@ -185,13 +173,40 @@ class Router {
     const appRoot = document.getElementById('app');
     if (!appRoot) return;
 
-    this.route('/', () => renderTo(appRoot, renderHome()), DEFAULT_TITLE);
-    this.route('/home', () => renderTo(appRoot, renderHome()), DEFAULT_TITLE);
-    this.route('/login', () => renderTo(appRoot, renderLogin()), 'Log In - FormaChat');
-    this.route('/register', () => renderTo(appRoot, renderRegister()), 'Create Your Account - FormaChat');
-    this.route('/verify-email', () => renderTo(appRoot, renderVerifyEmail()), 'Verify Your Email - FormaChat');
-    this.route('/forgot-password', () => renderTo(appRoot, renderForgotPassword()), 'Reset Your Password - FormaChat');
-    this.route('/magic-login', () => renderTo(appRoot, renderMagicLogin()), 'Signing You In - FormaChat');
+    this.route('/', async () => {
+      const { renderHome } = await import('./pages/public/home');
+      renderTo(appRoot, renderHome());
+    }, DEFAULT_TITLE);
+
+    this.route('/home', async () => {
+      const { renderHome } = await import('./pages/public/home');
+      renderTo(appRoot, renderHome());
+    }, DEFAULT_TITLE);
+
+    this.route('/login', async () => {
+      const { renderLogin } = await import('./pages/public/login');
+      renderTo(appRoot, renderLogin());
+    }, 'Log In - FormaChat');
+
+    this.route('/register', async () => {
+      const { renderRegister } = await import('./pages/public/register');
+      renderTo(appRoot, renderRegister());
+    }, 'Create Your Account - FormaChat');
+
+    this.route('/verify-email', async () => {
+      const { renderVerifyEmail } = await import('./pages/public/verify-email');
+      renderTo(appRoot, renderVerifyEmail());
+    }, 'Verify Your Email - FormaChat');
+
+    this.route('/forgot-password', async () => {
+      const { renderForgotPassword } = await import('./pages/public/forgot-password');
+      renderTo(appRoot, renderForgotPassword());
+    }, 'Reset Your Password - FormaChat');
+
+    this.route('/magic-login', async () => {
+      const { renderMagicLogin } = await import('./pages/public/magic-login');
+      renderTo(appRoot, renderMagicLogin());
+    }, 'Signing You In - FormaChat');
 
     this.route('/chat/:businessId', async () => {
       const params = this.getParams();
@@ -200,6 +215,7 @@ class Router {
       console.log('[Router] Loading chat widget...', { businessId: params.businessId, embedMode });
 
       try {
+        const { renderChatWidget } = await import('./pages/public/chat-widget');
         const content = await renderChatWidget(params.businessId, embedMode);
         renderTo(appRoot, content);
       } catch (error) {
@@ -209,24 +225,40 @@ class Router {
     }, 'Chat - FormaChat');
 
     this.protectedRoute('/dashboard/settings', async () => {
+      const [{ renderSettingsPage }, { renderDashboardLayout }] = await Promise.all([
+        import('./pages/dashboard/settings'),
+        import('./pages/dashboard/layout'),
+      ]);
       const content = renderSettingsPage();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
     }, 'Settings - FormaChat');
 
     this.protectedRoute('/dashboard', async () => {
+      const [{ renderDashboardHome }, { renderDashboardLayout }] = await Promise.all([
+        import('./pages/dashboard/home'),
+        import('./pages/dashboard/layout'),
+      ]);
       const content = renderDashboardHome();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
     }, 'Dashboard - FormaChat');
 
     this.protectedRoute('/dashboard/businesses', async () => {
+      const [{ renderBusinessList }, { renderDashboardLayout }] = await Promise.all([
+        import('./pages/dashboard/businesses/list'),
+        import('./pages/dashboard/layout'),
+      ]);
       const content = await renderBusinessList();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
     }, 'Your Businesses - FormaChat');
 
     this.protectedRoute('/dashboard/businesses/create', async () => {
+      const [{ renderBusinessCreate }, { renderDashboardLayout }] = await Promise.all([
+        import('./pages/dashboard/businesses/create'),
+        import('./pages/dashboard/layout'),
+      ]);
       const content = await renderBusinessCreate();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
@@ -234,6 +266,10 @@ class Router {
 
     this.protectedRoute('/dashboard/businesses/:id/edit', async () => {
       const params = this.getParams();
+      const [{ renderBusinessEdit }, { renderDashboardLayout }] = await Promise.all([
+        import('./pages/dashboard/businesses/edit'),
+        import('./pages/dashboard/layout'),
+      ]);
       const content = await renderBusinessEdit(params.id);
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
@@ -241,6 +277,10 @@ class Router {
 
     this.protectedRoute('/dashboard/businesses/:id/products', async () => {
       const params = this.getParams();
+      const [{ renderProductsPage }, { renderDashboardLayout }] = await Promise.all([
+        import('./pages/dashboard/businesses/products'),
+        import('./pages/dashboard/layout'),
+      ]);
       const content = await renderProductsPage(params.id);
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
@@ -248,25 +288,41 @@ class Router {
 
     this.protectedRoute('/dashboard/businesses/:id/documents', async () => {
       const params = this.getParams();
+      const [{ renderDocumentsPage }, { renderDashboardLayout }] = await Promise.all([
+        import('./pages/dashboard/businesses/documents'),
+        import('./pages/dashboard/layout'),
+      ]);
       const content = await renderDocumentsPage(params.id);
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
     }, 'Documents - FormaChat');
 
     this.protectedRoute('/dashboard/channels', async () => {
+      const [{ renderChannelsIndex }, { renderDashboardLayout }] = await Promise.all([
+        import('./pages/dashboard/channels/index'),
+        import('./pages/dashboard/layout'),
+      ]);
       const content = await renderChannelsIndex();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
     }, 'Channels - FormaChat');
 
     this.protectedRoute('/dashboard/channels/:id', async () => {
-        const params = this.getParams();
-        const content = await renderChannelsDetail(params.id);
-        const layout = await renderDashboardLayout(content);
-        renderTo(appRoot, layout);
+      const params = this.getParams();
+      const [{ renderChannelsDetail }, { renderDashboardLayout }] = await Promise.all([
+        import('./pages/dashboard/channels/detail'),
+        import('./pages/dashboard/layout'),
+      ]);
+      const content = await renderChannelsDetail(params.id);
+      const layout = await renderDashboardLayout(content);
+      renderTo(appRoot, layout);
     }, 'Channel Settings - FormaChat');
 
     this.protectedRoute('/dashboard/analytics', async () => {
+      const [{ renderAnalyticsIndex }, { renderDashboardLayout }] = await Promise.all([
+        import('./pages/dashboard/analytics/index'),
+        import('./pages/dashboard/layout'),
+      ]);
       const content = await renderAnalyticsIndex();
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);
@@ -274,6 +330,10 @@ class Router {
 
     this.protectedRoute('/dashboard/analytics/:id', async () => {
       const params = this.getParams();
+      const [{ renderAnalyticsDetail }, { renderDashboardLayout }] = await Promise.all([
+        import('./pages/dashboard/analytics/detail'),
+        import('./pages/dashboard/layout'),
+      ]);
       const content = await renderAnalyticsDetail(params.id);
       const layout = await renderDashboardLayout(content);
       renderTo(appRoot, layout);

@@ -43,6 +43,46 @@
         display: none;
         visibility: hidden;
       }
+
+      /* Static initial-load spinner - pure HTML/CSS, zero JS required, so it
+         paints the instant the browser parses this markup instead of
+         waiting for the JS bundle to download/parse/execute first. Vite
+         bundles every <script type="module"> referenced from this file into
+         one dependency graph, so the old approach (a tiny inline script
+         importing loading-spinner.ts to show a spinner "early") got merged
+         into the exact same single production bundle as everything else -
+         in production it never actually showed before the main content did.
+         Lives inside #app on purpose: router.ts's renderTo() clears #app's
+         content before rendering the first real page, so this needs no
+         manual cleanup - it's simply overwritten the moment routing starts. */
+      #initial-loader {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column;
+        justify-content: center; align-items: center;
+        background: #f5f5f5;
+      }
+      #initial-loader .spinner-wrapper {
+        position: relative; width: 60px; height: 60px; margin-bottom: 20px;
+      }
+      #initial-loader .spinner-ring-1 {
+        position: absolute; width: 100%; height: 100%;
+        border: 3px solid transparent; border-top-color: #636b2f;
+        border-radius: 50%; animation: initial-spin 1s linear infinite;
+      }
+      #initial-loader .spinner-ring-2 {
+        position: absolute; top: 10%; left: 10%; width: 80%; height: 80%;
+        border: 3px solid transparent; border-bottom-color: #bac095;
+        border-radius: 50%; animation: initial-spin-reverse 1.5s linear infinite;
+      }
+      #initial-loader .loading-text {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #636b2f; font-weight: 600; font-size: 0.95rem; letter-spacing: 0.5px;
+        animation: initial-pulse-text 1.5s ease-in-out infinite;
+      }
+      @keyframes initial-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      @keyframes initial-spin-reverse { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+      @keyframes initial-pulse-text { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
     </style>
   </head>
   <body>
@@ -75,16 +115,13 @@
       
       <p><a href="/#/register">Sign up</a> or <a href="/#/login">login</a> to your Formachat account.</p>
     </section>
-    <div id="app"></div>
-
-    <script type="module">
-      
-      import { showLoadingSpinner } from './src/components/loading-spinner.ts'; 
-
-      const app = document.getElementById('app');
-      
-      showLoadingSpinner(app, 'Initializing ...');
-    </script>
+    <div id="app"><div id="initial-loader">
+      <div class="spinner-wrapper">
+        <div class="spinner-ring-1"></div>
+        <div class="spinner-ring-2"></div>
+      </div>
+      <p class="loading-text">Initializing...</p>
+    </div></div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>
