@@ -1,5 +1,6 @@
 import { register } from '../../services/auth.service';
 import { showToast } from '../../utils/toast';
+import { attachPasswordToggle } from '../../utils/password-field.utils';
 
 function injectRegisterStyles() {
     const style = document.createElement('style');
@@ -127,34 +128,6 @@ function injectRegisterStyles() {
             text-decoration: underline;
         }
 
-         /* Password Toggle Button */
-        .password-toggle-btn {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-            transition: color 0.2s ease;
-        }
-
-        .password-toggle-btn:hover {
-            color: var(--primary);
-        }
-
-        .password-toggle-btn:focus {
-            outline: none;
-        }
-
-        .eye-icon {
-            pointer-events: none;
-        }
     `;
     document.head.appendChild(style);
 }
@@ -275,51 +248,17 @@ function createFormField(type: string, name: string, label: string, required: bo
     if (type === 'password') {
         const inputWrapper = document.createElement('div');
         inputWrapper.style.position = 'relative';
-        
+
         const input = document.createElement('input');
         input.type = type;
         input.name = name;
         input.required = required;
         input.className = 'form-input';
-        input.style.paddingRight = '45px'; // Make room for the icon
-        
-        const toggleBtn = document.createElement('button');
-        toggleBtn.type = 'button';
-        toggleBtn.className = 'password-toggle-btn';
-        toggleBtn.innerHTML = `
-            <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                <line x1="1" y1="1" x2="23" y2="23"></line>
-            </svg>
-        `;
-        
-        toggleBtn.addEventListener('click', () => {
-            if (input.type === 'password') {
-                // Password is hidden, show it → use CROSSED eye (password visible)
-                input.type = 'text';
-                toggleBtn.innerHTML = `
-                    
-                    <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                `;
-            } else {
-                // Password is visible, hide it → use OPEN eye (password hidden)
-                input.type = 'password';
-                toggleBtn.innerHTML = `
-                    <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                    </svg>
-                `;
-            }
-        });
-                
+
         inputWrapper.appendChild(input);
-        inputWrapper.appendChild(toggleBtn);
+        attachPasswordToggle(input);
         div.appendChild(inputWrapper);
-        
+
         return div;
     }
 

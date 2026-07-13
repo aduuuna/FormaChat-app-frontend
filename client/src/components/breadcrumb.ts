@@ -24,7 +24,7 @@ function injectBreadcrumbStyles() {
       border-radius: 50px; /* Pill shape */
       box-shadow: 0 2px 10px rgba(0,0,0,0.03);
       
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       font-size: 14px;
     }
 

@@ -8,7 +8,7 @@ function ensureContainer(): HTMLElement {
   container.id = 'toast-container';
   container.style.cssText = `
     position: fixed;
-    bottom: 24px;
+    top: 24px;
     right: 24px;
     z-index: 99999;
     display: flex;
@@ -24,7 +24,7 @@ const OLIVE_CARD_BG = '#f4f6ea';
 const OLIVE_CARD_BORDER = '#dde2c8';
 
 const COLORS: Record<ToastType, { borderBottom: string; text: string; icon: string }> = {
-  success: { borderBottom: '#28a745', text: '#3a4014', icon: '✓' },
+  success: { borderBottom: '#636b2f', text: '#3a4014', icon: '✓' },
   error:   { borderBottom: '#dc3545', text: '#3a4014', icon: '✕' },
   info:    { borderBottom: '#636b2f', text: '#3a4014', icon: 'ℹ' },
 };

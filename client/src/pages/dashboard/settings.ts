@@ -5,6 +5,7 @@ import { getUser, saveUser, logout as clearLocalAuth } from '../../utils/auth.ut
 import { apiPut, apiGet, apiDelete } from '../../utils/api.utils';
 import { AUTH_ENDPOINTS } from '../../config/api.config';
 import { showToast } from '../../utils/toast';
+import { attachPasswordToggle } from '../../utils/password-field.utils';
 
 type SettingsTab = 'account' | 'sessions' | 'security';
 
@@ -378,6 +379,7 @@ export function renderSettingsPage(): HTMLElement {
       currentPwInput.placeholder = 'Enter current password';
       currentPwField.appendChild(currentPwLabel);
       currentPwField.appendChild(currentPwInput);
+      attachPasswordToggle(currentPwInput);
       pwCard.appendChild(currentPwField);
 
       const newPwField = document.createElement('div');
@@ -394,6 +396,7 @@ export function renderSettingsPage(): HTMLElement {
       newPwHint.textContent = 'Use at least one uppercase letter, number, and special character.';
       newPwField.appendChild(newPwLabel);
       newPwField.appendChild(newPwInput);
+      attachPasswordToggle(newPwInput);
       newPwField.appendChild(newPwHint);
       pwCard.appendChild(newPwField);
 
@@ -469,6 +472,7 @@ export function renderSettingsPage(): HTMLElement {
       tfaPwInput.placeholder = 'Enter current password to confirm';
       tfaField.appendChild(tfaLabel);
       tfaField.appendChild(tfaPwInput);
+      attachPasswordToggle(tfaPwInput);
       tfaCard.appendChild(tfaField);
 
       const tfaToggleBtn = document.createElement('button');
@@ -655,6 +659,7 @@ export function renderSettingsPage(): HTMLElement {
       deleteInput.placeholder = 'Enter current password';
       deleteField.appendChild(deleteLabel);
       deleteField.appendChild(deleteInput);
+      attachPasswordToggle(deleteInput);
       dangerCard.appendChild(deleteField);
 
       const deleteBtn = document.createElement('button');

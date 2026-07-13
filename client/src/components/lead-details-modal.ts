@@ -26,7 +26,7 @@ function injectLeadDetailsStyles() {
       display: flex;
       flex-direction: column;
       gap: 24px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       /* max-height: 70vh;  <-- REMOVED */
       /* overflow-y: auto;  <-- REMOVED */
       padding-bottom: 20px;

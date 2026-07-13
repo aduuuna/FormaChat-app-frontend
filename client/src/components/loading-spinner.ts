@@ -62,7 +62,7 @@ export function createLoadingSpinner(message: string = 'Loading...'): HTMLElemen
 
       /* Loading Text */
       .loading-text {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         color: var(--primary);
         font-weight: 600;
         font-size: 0.95rem;

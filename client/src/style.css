@@ -1,11 +1,18 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  /* background-color: #f5f5f5; */
+  /* Light-only, deliberately - this app has no implemented dark theme.
+     `light dark` here (the Vite scaffold default) tells browsers this page
+     supports the OS dark mode preference, so on a phone with dark mode on,
+     the browser applies its own native dark styling to form controls
+     wherever a page doesn't hyper-explicitly override every property -
+     producing a dark input background with mismatched text color even
+     though every page here is styled light-only. */
+  color-scheme: light;
+  color: #1a1a1a;
+  background-color: #f5f5f5;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,43 +20,17 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
+html, body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
   min-height: 100vh;
-  /* background-color: #f5f5f5; */
+  background-color: #f5f5f5;
+  color: #1a1a1a;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-  min-height: 100vh;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #f5f5f5;
-    background-color: #f5f5f5;
-  }
-  
-  button {
-    background-color: #f9f9f9;
-  }
+/* Form controls don't inherit font-family from the page by default in most
+   browsers' UA stylesheets - they fall back to the OS's native UI font
+   unless told otherwise, which is why placeholders/inputs could look like
+   they're in a different font than the rest of the page. */
+input, textarea, select, button {
+  font-family: inherit;
 }

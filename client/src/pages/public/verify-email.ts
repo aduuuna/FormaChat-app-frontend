@@ -210,10 +210,12 @@ export function renderVerifyEmail(): HTMLElement {
 
     const otpInput = document.createElement('input');
     otpInput.type = 'text';
+    otpInput.inputMode = 'numeric';
     otpInput.name = 'otp';
     otpInput.required = true;
     otpInput.maxLength = 6;
     otpInput.className = 'otp-input';
+    otpInput.placeholder = '000000';
     otpDiv.appendChild(otpInput);
 
     form.appendChild(otpDiv);

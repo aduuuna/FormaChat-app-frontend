@@ -45,7 +45,7 @@ function injectAnalyticsDetailStyles() {
             width: 95%;
             margin: 0 auto;
             padding-bottom: 60px;
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             animation: fadeIn 0.4s ease-out;
         }
 

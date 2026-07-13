@@ -26,7 +26,7 @@ function injectSessionStyles() {
       display: flex;
       flex-direction: column;
       gap: 24px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       padding-bottom: 20px;
       width: 100%;
     }

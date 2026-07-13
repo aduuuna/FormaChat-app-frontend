@@ -1,5 +1,6 @@
 import { requestPasswordReset, confirmPasswordReset } from '../../services/auth.service';
 import { showToast } from '../../utils/toast';
+import { attachPasswordToggle } from '../../utils/password-field.utils';
 
 function injectForgotPasswordStyles() {
   if (document.getElementById('forgot-password-styles')) return;
@@ -156,8 +157,9 @@ export function renderForgotPassword(): HTMLElement {
   otpLabel.textContent = 'Reset code';
   const otpInput = document.createElement('input');
   otpInput.type = 'text';
+  otpInput.inputMode = 'numeric';
   otpInput.className = 'forgot-input';
-  otpInput.placeholder = '6-digit code';
+  otpInput.placeholder = '000000';
   otpInput.maxLength = 6;
   otpInput.style.letterSpacing = '4px';
   otpInput.style.textAlign = 'center';
@@ -177,6 +179,7 @@ export function renderForgotPassword(): HTMLElement {
   pwInput.placeholder = 'At least 8 characters';
   pwGroup.appendChild(pwLabel);
   pwGroup.appendChild(pwInput);
+  attachPasswordToggle(pwInput);
   step2.appendChild(pwGroup);
 
   const confirmBtn = document.createElement('button');
